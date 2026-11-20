@@ -116,6 +116,7 @@ export function WhyChooseUs() {
                   src="https://images.unsplash.com/photo-1779285756094-85ddc78ead65?q=80&w=1356&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"
                   alt="Professional construction engineers inspecting heavy telescopic machinery"
                   fill
+                  unoptimized
                   sizes="(max-width: 1024px) 100vw, 50vw"
                   className="object-cover object-center"
                 />

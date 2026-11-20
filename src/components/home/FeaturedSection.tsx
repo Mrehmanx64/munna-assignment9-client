@@ -1,15 +1,14 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, Sparkles, PackageSearch } from "lucide-react";
 import { EquipmentCard } from "@/components/equipment/EquipmentCard";
-import { MotionReveal } from "@/components/shared/MotionReveal";
 import { useApp } from "@/context/AppContext";
 
 export function FeaturedSection() {
-  const { equipmentList } = useApp();
-  const [selectedCategory, setSelectedCategory] = useState<string>("All");
+  const { equipmentList = [] } = useApp();
+  const [selectedCategory, setSelectedCategory] = useState("All");
 
   const categories = [
     "All",
@@ -20,49 +19,58 @@ export function FeaturedSection() {
     "Vehicles & Transportation",
   ];
 
-  const filteredEquipment = equipmentList
-    .filter((item) =>
-      selectedCategory === "All" ? true : item.category === selectedCategory
-    )
-    .slice(0, 6);
+  const filteredEquipment = useMemo(() => {
+    if (!Array.isArray(equipmentList)) return [];
+    const filtered =
+      selectedCategory === "All"
+        ? equipmentList
+        : equipmentList.filter(
+            (item) =>
+              item.category?.trim().toLowerCase() ===
+              selectedCategory.trim().toLowerCase()
+          );
+    return filtered.slice(0, 6);
+  }, [equipmentList, selectedCategory]);
 
   return (
-    <section className="py-16 sm:py-20 bg-[#F7F6F1] border-b border-[#E7E7DF]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section className="border-b border-[#E7E7DF] bg-[#F7F6F1] py-16 sm:py-20">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+
         {/* Section Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#D99A42]">
-              <Sparkles className="w-3.5 h-3.5" />
+        <div className="mb-10 flex flex-col justify-between gap-6 md:flex-row md:items-end">
+          <div className="space-y-3">
+            <div className="inline-flex items-center gap-2 text-xs font-bold tracking-wider text-[#D99A42] uppercase">
+              <Sparkles className="h-4 w-4" />
               <span>Curated Fleet Listings</span>
             </div>
-            <h2 className="font-heading text-3xl sm:text-4xl font-extrabold text-[#183C32] tracking-tight">
+            <h2 className="font-heading text-3xl font-extrabold tracking-tight text-[#183C32] sm:text-4xl">
               Equipment Worth Exploring
             </h2>
-            <p className="text-sm sm:text-base text-[#6A726B] max-w-xl">
-              Heavy hydraulic machinery, large-format cinema optics, and certified jobsite equipment ready for scheduled deployment.
+            <p className="max-w-xl text-sm text-[#6A726B] sm:text-base">
+              Explore premium equipment, professional machinery, photography gear, and specialized assets ready for your next project.
             </p>
           </div>
 
           <Link
             href="/equipment"
-            className="inline-flex items-center gap-2 text-sm font-semibold text-[#183C32] hover:text-[#245344] group self-start md:self-auto"
+            className="group inline-flex items-center gap-2 self-start text-sm font-semibold text-[#183C32] hover:text-[#245344] md:self-auto"
           >
             <span>View Complete Catalog ({equipmentList.length})</span>
-            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
           </Link>
         </div>
 
-        {/* Category Filter Pills */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-8 no-scrollbar">
+        {/* Category Filters */}
+        <div className="no-scrollbar mb-8 flex items-center gap-2 overflow-x-auto pb-2">
           {categories.map((cat) => (
             <button
               key={cat}
+              type="button"
               onClick={() => setSelectedCategory(cat)}
-              className={`px-4 py-2 text-xs font-semibold rounded-xs whitespace-nowrap transition-all border ${
+              className={`border px-4 py-2 text-xs font-semibold whitespace-nowrap transition-all ${
                 selectedCategory === cat
-                  ? "bg-[#183C32] text-white border-[#183C32] shadow-xs"
-                  : "bg-white text-[#525B55] border-[#DCDBCF] hover:border-[#183C32] hover:text-[#183C32]"
+                  ? "border-[#183C32] bg-[#183C32] text-white"
+                  : "border-[#DCDBCF] bg-white text-[#525B55] hover:border-[#183C32] hover:text-[#183C32]"
               }`}
             >
               {cat === "All" ? "All Equipment" : cat.replace(" Equipment", "")}
@@ -70,31 +78,49 @@ export function FeaturedSection() {
           ))}
         </div>
 
-        {/* Equipment Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-          {filteredEquipment.map((equipment, index) => (
-            <MotionReveal key={equipment.id} delay={index * 0.1}>
+        {/* Equipment Grid — no motion wrappers, cards render immediately */}
+        {filteredEquipment.length > 0 ? (
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-8 lg:grid-cols-3">
+            {filteredEquipment.map((equipment, index) => (
               <EquipmentCard
+                key={equipment.id}
                 equipment={equipment}
                 priority={index < 3}
               />
-            </MotionReveal>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="border border-[#E7E7DF] bg-white px-6 py-16 text-center">
+            <PackageSearch className="mx-auto mb-4 h-12 w-12 text-[#A5AA9F]" />
+            <h3 className="mb-2 text-xl font-bold text-[#183C32]">No Equipment Found</h3>
+            <p className="mb-6 text-sm text-[#6A726B]">
+              {selectedCategory === "All"
+                ? "There are currently no equipment listings available."
+                : `No equipment found in ${selectedCategory}. Try another category.`}
+            </p>
+            <button
+              type="button"
+              onClick={() => setSelectedCategory("All")}
+              className="bg-[#183C32] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#245344]"
+            >
+              View All Equipment
+            </button>
+          </div>
+        )}
 
-        {/* Bottom CTA Card Banner */}
-        <div className="mt-12 p-6 sm:p-8 rounded-sm bg-[#EBEAE3] border border-[#DCDBCF] flex flex-col sm:flex-row items-center justify-between gap-6">
+        {/* Bottom CTA Banner */}
+        <div className="mt-12 flex flex-col items-center justify-between gap-6 border border-[#DCDBCF] bg-[#EBEAE3] p-6 sm:flex-row sm:p-8">
           <div className="space-y-1 text-center sm:text-left">
             <h3 className="font-heading text-lg font-bold text-[#183C32]">
-              Need specialized or high-capacity equipment not listed here?
+              Need specialized or high-capacity equipment?
             </h3>
-            <p className="text-xs sm:text-sm text-[#5C665F]">
+            <p className="text-xs text-[#5C665F] sm:text-sm">
               Our dispatch team sources custom cranes, heavy lowboys, and cinema production packages within 24 hours.
             </p>
           </div>
           <Link
             href="/equipment"
-            className="px-5 py-2.5 bg-[#183C32] hover:bg-[#245344] text-white text-xs font-semibold rounded-xs transition-colors whitespace-nowrap shadow-xs"
+            className="bg-[#183C32] px-5 py-3 text-xs font-semibold whitespace-nowrap text-white transition-colors hover:bg-[#245344]"
           >
             Request Fleet Concierge
           </Link>
