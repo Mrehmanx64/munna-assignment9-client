@@ -1,30 +1,120 @@
 # Rentora — Industrial Equipment Rental Marketplace
 
-A premium, production-grade marketplace frontend connecting equipment owners with industrial, construction, agricultural, and commercial renters.
+Rentora is a premium, art-directed industrial equipment rental marketplace built with **Next.js 16 (App Router)**, **TypeScript**, **Tailwind CSS v4**, **Framer Motion**, and **shadcn/ui**.
 
-## Tech Stack
+It seamlessly connects verified heavy machinery & technical equipment owners with contractors, cinematographers, agricultural operators, and industrial enterprises.
 
-- **Framework**: Next.js 16 (App Router, Turbopack)
-- **Language**: TypeScript (strict mode)
-- **Styling**: Tailwind CSS v4, tw-animate-css, shadcn/ui
-- **Animation**: Framer Motion
-- **Icons**: Lucide React
-- **Forms & Validation**: React Hook Form, Zod
-- **Data & Charts**: TanStack React Query, Recharts, TanStack Table
-- **Notifications**: Sonner
+---
 
-## Getting Started
+## 🏗️ Design Direction: Industrial Editorial Marketplace
+
+The visual design is inspired by high-end architectural monographs, contemporary heavy machinery publications, and precision product marketplaces.
+
+### Centralized Design Tokens
+- **Primary (Forest Green)**: `#183C32` — Authority, durability, industrial precision
+- **Primary Hover**: `#245344` — Subtle tactile feedback
+- **Accent (Warm Amber)**: `#D99A42` — Industrial caution, high-visibility actions
+- **Background (Warm Ivory)**: `#F7F6F1` — Calibrated editorial foundation
+- **Surface**: `#FFFFFF` — High-contrast component containers
+- **Main Text**: `#202824` — Deep charcoal readability
+- **Secondary Text**: `#777D77` — Slate technical metadata
+- **Borders & Dividers**: `#E7E7DF` — Subtle architectural framing
+- **Dark Forest (Dashboard Shell)**: `#11231D` — Mission-control navigation depth
+
+### Typography
+- **Headings**: Manrope (editorial bold titles, confident serif-like structure without clunky ornamentation)
+- **Body & Specs**: Inter (high-legibility technical specs, telemetry labels, and data grids)
+
+---
+
+## ⚡ Role-Based Architecture & Live Persona Switcher
+
+Rentora features an integrated **Interactive Persona Switcher** embedded directly in the top navigation bar and mobile drawer. You can switch between roles in real-time with zero friction:
+
+1. **Customer (`Alexander Hayes`)**:
+   - Browse, search, and filter catalog with live parameters.
+   - Save machinery to Favorites with persistent state.
+   - Book equipment with automatic escrow calculation (duration × daily/weekly/hourly rate + damage waiver + mobilization).
+   - View mobilization slips, rental history, and booking status in `/dashboard/customer`.
+   - Edit contractor profile, dispatch addresses, and certifications in `/dashboard/customer/profile`.
+
+2. **Fleet Owner (`Marcus Vance`)**:
+   - High-yield telemetry dashboard with Recharts financial performance charts in `/dashboard/owner`.
+   - Review incoming rental requests, approve or complete bookings in `/dashboard/owner/rentals`.
+   - List new heavy machinery with multi-tier specs, live image preview, and terms in `/dashboard/owner/add`.
+   - Manage fleet listing status (Active/Maintenance/Draft) and inventory in `/dashboard/owner/equipment`.
+
+3. **Platform Administrator (`Elena Rostova`)**:
+   - Master platform console with GMV area charts and category distribution donut charts in `/dashboard/admin`.
+   - Manage user roles (Customer, Owner, Admin) and account status in `/dashboard/admin/users`.
+   - Quality control & safety inspection approvals for pending machinery in `/dashboard/admin/equipment`.
+   - Master escrow ledger & dispute resolution across all platform rentals in `/dashboard/admin/rentals`.
+
+4. **Guest (Unauthenticated)**:
+   - Full public browsing of catalog, categories, specifications, and owner reviews.
+   - Prompts for sign-in upon attempting high-intent booking or favoriting actions.
+   - Quick-login presets on `/login` and `/register` for 1-click test drive of any persona.
+
+---
+
+## 🗺️ Route Map & Implemented Pages
+
+### Public Website
+- `/` — Editorial Homepage (Hero with instant search, 6 Featured listings, 6 Category cards, Why Choose Us editorial layout, 3-step How It Works, Verified Reviews, Certified Fleet Owners, Owner Monetization CTA, Industrial Footer with X branding).
+- `/equipment` — Advanced Equipment Catalog (3-column responsive layout, multi-parameter keyword & location filter, category facets, price slider, rental type toggles, availability filters, sort orders, and active filter tags).
+- `/equipment/[id]` — Dynamic Equipment Detail Page (Interactive multi-angle photo gallery with modal view, full technical specifications grid, verified owner trust badge, contractual terms, related equipment, and functional Escrow Booking Modal).
+- `/login` — Editorial Authentication (Demo persona quick-login chips, email/password validation, Google SSO mockup, password visibility toggle).
+- `/register` — Account Registration (Role selector, live avatar preview, full validation feedback).
+
+### Customer Hub
+- `/dashboard/customer` — Active, pending, and completed leases with printable mobilization slips.
+- `/dashboard/customer/favorites` — Saved machinery with immediate booking dispatch.
+- `/dashboard/customer/profile` — Contractor information, company details, and verified credentials.
+
+### Owner Command Center
+- `/dashboard/owner` — Fleet analytics with monthly earnings area chart and dispatch volume chart.
+- `/dashboard/owner/rentals` — Incoming lease requests with accept/reject/mark completed actions.
+- `/dashboard/owner/add` — Comprehensive listing creation form with real-time preview.
+- `/dashboard/owner/equipment` — Fleet inventory management with status toggles and listing removals.
+- `/dashboard/owner/profile` — Fleet owner profile and dispatch depot settings.
+
+### Master Administration Console
+- `/dashboard/admin` — Platform-wide metrics, GMV trend lines, and category donut distribution.
+- `/dashboard/admin/users` — User directory with search, filtering, and role switching.
+- `/dashboard/admin/equipment` — Safety review queue with one-click approve/reject actions.
+- `/dashboard/admin/rentals` — Global escrow ledger tracking all active customer-owner bookings.
+- `/dashboard/admin/profile` — Platform officer credentials.
+
+---
+
+## 💻 Tech Stack & Packages
+
+- **Framework**: Next.js 16.0.7 (App Router, Turbopack)
+- **Runtime**: React 19, TypeScript (strict mode)
+- **Styling**: Tailwind CSS v4, tw-animate-css, shadcn/ui components
+- **Motion**: Framer Motion (subtle scroll reveals with `prefers-reduced-motion` compliance)
+- **Data Visualization**: Recharts (ResponsiveContainer, AreaChart, BarChart, PieChart)
+- **Icons**: Lucide React + custom inline brand SVGs
+- **Notifications**: Sonner toast system
+- **State Management**: React Context (`AppContext.tsx`) with optimistic local updates and persistent favorites/inventory
+
+---
+
+## 🚀 Running the Project
 
 ```bash
+# Navigate to client directory
+cd client
+
 # Install dependencies
 npm install
 
-# Run development server
+# Start development server
 npm run dev
 
-# Run production build
+# Run production build (verifies TypeScript, routing, and Turbopack asset bundling)
 npm run build
 
-# Run linter
+# Run linting (0 errors, 0 warnings)
 npm run lint
 ```
