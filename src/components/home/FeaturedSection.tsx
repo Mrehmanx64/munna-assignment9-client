@@ -3,12 +3,26 @@
 import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Sparkles, PackageSearch } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { EquipmentCard } from "@/components/equipment/EquipmentCard";
 import { useApp } from "@/context/AppContext";
+import { equipmentApi } from "@/lib/api";
+import { Equipment } from "@/types";
 
 export function FeaturedSection() {
   const { equipmentList = [] } = useApp();
   const [selectedCategory, setSelectedCategory] = useState("All");
+
+  const { data: featuredData, isLoading } = useQuery({
+    queryKey: ["featuredEquipment"],
+    queryFn: async (): Promise<Equipment[]> => {
+      const res = await equipmentApi.getFeatured();
+      return res || [];
+    },
+    staleTime: 60000,
+  });
+
+  const featuredList: Equipment[] = featuredData || [];
 
   const categories = [
     "All",
@@ -19,18 +33,25 @@ export function FeaturedSection() {
     "Vehicles & Transportation",
   ];
 
+  const sourceEquipment = useMemo(() => {
+    if (featuredData && featuredData.length > 0) {
+      return featuredData;
+    }
+    return equipmentList;
+  }, [featuredData, equipmentList]);
+
   const filteredEquipment = useMemo(() => {
-    if (!Array.isArray(equipmentList)) return [];
+    if (!Array.isArray(sourceEquipment)) return [];
     const filtered =
       selectedCategory === "All"
-        ? equipmentList
-        : equipmentList.filter(
+        ? sourceEquipment
+        : sourceEquipment.filter(
             (item) =>
               item.category?.trim().toLowerCase() ===
               selectedCategory.trim().toLowerCase()
           );
     return filtered.slice(0, 6);
-  }, [equipmentList, selectedCategory]);
+  }, [sourceEquipment, selectedCategory]);
 
   return (
     <section className="border-b border-[#E7E7DF] bg-[#F7F6F1] py-16 sm:py-20">
@@ -55,7 +76,7 @@ export function FeaturedSection() {
             href="/equipment"
             className="group inline-flex items-center gap-2 self-start text-sm font-semibold text-[#183C32] hover:text-[#245344] md:self-auto"
           >
-            <span>View Complete Catalog ({equipmentList.length})</span>
+            <span>View Complete Catalog ({sourceEquipment.length})</span>
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
           </Link>
         </div>
@@ -67,7 +88,7 @@ export function FeaturedSection() {
               key={cat}
               type="button"
               onClick={() => setSelectedCategory(cat)}
-              className={`border px-4 py-2 text-xs font-semibold whitespace-nowrap transition-all ${
+              className={`border px-4 py-2 text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                 selectedCategory === cat
                   ? "border-[#183C32] bg-[#183C32] text-white"
                   : "border-[#DCDBCF] bg-white text-[#525B55] hover:border-[#183C32] hover:text-[#183C32]"
@@ -78,8 +99,21 @@ export function FeaturedSection() {
           ))}
         </div>
 
-        {/* Equipment Grid — no motion wrappers, cards render immediately */}
-        {filteredEquipment.length > 0 ? (
+        {/* Loading State Skeleton */}
+        {isLoading && featuredList.length === 0 ? (
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-8 lg:grid-cols-3">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="animate-pulse bg-white border border-[#E7E7DF] rounded-xs overflow-hidden h-96">
+                <div className="h-48 bg-[#EBEAE3]" />
+                <div className="p-4 space-y-3">
+                  <div className="h-4 bg-[#EBEAE3] w-2/3" />
+                  <div className="h-3 bg-[#EBEAE3] w-1/2" />
+                  <div className="h-8 bg-[#EBEAE3] w-full mt-6" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filteredEquipment.length > 0 ? (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-8 lg:grid-cols-3">
             {filteredEquipment.map((equipment, index) => (
               <EquipmentCard
@@ -101,7 +135,7 @@ export function FeaturedSection() {
             <button
               type="button"
               onClick={() => setSelectedCategory("All")}
-              className="bg-[#183C32] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#245344]"
+              className="bg-[#183C32] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#245344] cursor-pointer"
             >
               View All Equipment
             </button>

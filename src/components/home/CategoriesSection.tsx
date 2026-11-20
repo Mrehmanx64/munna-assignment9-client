@@ -4,9 +4,31 @@ import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { MOCK_CATEGORIES } from "@/data/mockData";
+import { equipmentApi } from "@/lib/api";
 
 export function CategoriesSection() {
+  const { data: categoryStats } = useQuery({
+    queryKey: ["equipmentCategories"],
+    queryFn: () => equipmentApi.getCategories(),
+    staleTime: 60000,
+  });
+
+  const categories = MOCK_CATEGORIES.map((cat) => {
+    const liveMatch = Array.isArray(categoryStats)
+      ? categoryStats.find(
+          (c: any) =>
+            (c.category || c.name || c._id)?.toString().toLowerCase() ===
+            cat.name.toLowerCase()
+        )
+      : null;
+    return {
+      ...cat,
+      count: liveMatch?.count !== undefined ? liveMatch.count : cat.count,
+    };
+  });
+
   return (
     <section className="py-16 sm:py-24 bg-white border-b border-[#E7E7DF]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -36,7 +58,7 @@ export function CategoriesSection() {
 
         {/* Categories Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-          {MOCK_CATEGORIES.map((cat, index) => (
+          {categories.map((cat, index) => (
             <Link
               key={cat.name}
               href={`/equipment?category=${encodeURIComponent(cat.name)}`}

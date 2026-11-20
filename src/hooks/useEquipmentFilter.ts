@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Equipment } from "@/types";
+import { equipmentApi } from "@/lib/api";
 
 export interface FilterCriteria {
   search: string;
@@ -15,7 +17,7 @@ export interface FilterCriteria {
 }
 
 export function useEquipmentFilter(
-  equipmentList: Equipment[],
+  fallbackEquipmentList: Equipment[],
   initialCriteria?: Partial<FilterCriteria>
 ) {
   const [criteria, setCriteria] = useState<FilterCriteria>({
@@ -49,10 +51,62 @@ export function useEquipmentFilter(
     });
   };
 
-  const filteredEquipment = useMemo(() => {
-    return equipmentList
+  // Build server query parameters
+  const serverParams = useMemo(() => {
+    const params: Record<string, any> = {
+      limit: 30,
+    };
+
+    if (criteria.search.trim()) {
+      params.search = criteria.search.trim();
+    }
+    if (criteria.category && criteria.category !== "All") {
+      params.category = criteria.category;
+    }
+    if (criteria.location.trim()) {
+      params.location = criteria.location.trim();
+    }
+    if (criteria.rentalType && criteria.rentalType !== "all") {
+      params.rentalType =
+        criteria.rentalType === "daily"
+          ? "Daily"
+          : criteria.rentalType === "weekly"
+          ? "Weekly"
+          : criteria.rentalType === "monthly"
+          ? "Monthly"
+          : criteria.rentalType;
+    }
+    if (criteria.maxPrice && criteria.maxPrice < 1500) {
+      params.maxPrice = criteria.maxPrice;
+    }
+    if (criteria.inStockOnly) {
+      params.available = true;
+    }
+
+    if (criteria.sortBy === "price-low") {
+      params.sort = "price_asc";
+    } else if (criteria.sortBy === "price-high") {
+      params.sort = "price_desc";
+    } else if (criteria.sortBy === "rating") {
+      params.sort = "rating";
+    } else {
+      params.sort = "newest";
+    }
+
+    return params;
+  }, [criteria]);
+
+  // Execute server-side search and filtering via TanStack Query
+  const { data: serverData, isLoading, isError } = useQuery({
+    queryKey: ["equipmentCatalog", serverParams],
+    queryFn: () => equipmentApi.getEquipment(serverParams),
+    staleTime: 30000,
+  });
+
+  // Client-side fallback if server returns empty or during initial render
+  const localFilteredFallback = useMemo(() => {
+    return fallbackEquipmentList
       .filter((eq) => {
-        // Keyword Search (title, brand, model)
         if (criteria.search.trim()) {
           const q = criteria.search.toLowerCase();
           const matchTitle = eq.title.toLowerCase().includes(q);
@@ -61,33 +115,27 @@ export function useEquipmentFilter(
           if (!matchTitle && !matchBrand && !matchModel) return false;
         }
 
-        // Category Filter
         if (criteria.category !== "All" && eq.category !== criteria.category) {
           return false;
         }
 
-        // Location Filter
         if (criteria.location.trim()) {
           const loc = criteria.location.toLowerCase();
           if (!eq.location.toLowerCase().includes(loc)) return false;
         }
 
-        // Rental Type Filter
         if (criteria.rentalType !== "all" && eq.rentalType !== criteria.rentalType) {
           return false;
         }
 
-        // Max Price Filter
         if (eq.rentalPrice > criteria.maxPrice) {
           return false;
         }
 
-        // In Stock Filter
         if (criteria.inStockOnly && eq.availableQuantity < 1) {
           return false;
         }
 
-        // Verified Owner Filter
         if (criteria.verifiedOnly && !eq.ownerVerified) {
           return false;
         }
@@ -100,7 +148,18 @@ export function useEquipmentFilter(
         if (criteria.sortBy === "rating") return b.rating - a.rating;
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       });
-  }, [equipmentList, criteria]);
+  }, [fallbackEquipmentList, criteria]);
+
+  const filteredEquipment = useMemo<Equipment[]>(() => {
+    if (serverData && serverData.equipment && serverData.equipment.length > 0) {
+      return serverData.equipment;
+    }
+    if (serverData && serverData.equipment && serverData.equipment.length === 0 && !isError) {
+      // Server returned 0 matching records for current filters
+      return [];
+    }
+    return localFilteredFallback;
+  }, [serverData, isError, localFilteredFallback]);
 
   // Active filters count
   const activeFiltersCount = useMemo(() => {
@@ -121,5 +180,6 @@ export function useEquipmentFilter(
     resetCriteria,
     filteredEquipment,
     activeFiltersCount,
+    isLoading,
   };
 }

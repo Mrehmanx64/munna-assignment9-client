@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -18,28 +18,105 @@ import {
   FileText,
   Clock,
   Sparkles,
+  PackageOpen,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { Navbar } from "@/components/navigation/Navbar";
 import { Footer } from "@/components/navigation/Footer";
 import { EquipmentGallery } from "@/components/equipment/EquipmentGallery";
 import { EquipmentCard } from "@/components/equipment/EquipmentCard";
 import { BookingModal } from "@/components/equipment/BookingModal";
 import { useApp } from "@/context/AppContext";
+import { equipmentApi } from "@/lib/api";
+import { toast } from "sonner";
 
 export default function EquipmentDetailsPage() {
   const params = useParams();
+  const router = useRouter();
   const id = params?.id as string;
-  const { equipmentList, isFavorite, toggleFavorite } = useApp();
+  const { currentUser, currentRole, equipmentList, isFavorite, toggleFavorite } = useApp();
 
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
 
-  const equipment = equipmentList.find((e) => e.id === id) || equipmentList[0];
-  const favorited = isFavorite(equipment.id);
+  // Fetch real equipment from backend API via TanStack Query
+  const { data: serverEquipment, isLoading } = useQuery({
+    queryKey: ["equipmentDetails", id],
+    queryFn: () => equipmentApi.getById(id),
+    enabled: !!id,
+    staleTime: 60000,
+  });
+
+  const equipment =
+    serverEquipment && serverEquipment.id
+      ? serverEquipment
+      : equipmentList.find((e) => e.id === id) || equipmentList[0];
+
+  const favorited = isFavorite(equipment?.id);
 
   // Related equipment from same category (excluding current)
   const relatedEquipment = equipmentList
-    .filter((e) => e.category === equipment.category && e.id !== equipment.id)
+    .filter((e) => e.category === equipment?.category && e.id !== equipment?.id)
     .slice(0, 3);
+
+  const handleBookClick = () => {
+    if (!currentUser || currentRole === "guest") {
+      toast.info("Please sign in with a contractor customer account to book machinery");
+      router.push(`/login?redirect=/equipment/${id}`);
+      return;
+    }
+    if (equipment.status !== "active") {
+      toast.error("This equipment listing is currently pending administrative audit and cannot be booked.");
+      return;
+    }
+    setBookingModalOpen(true);
+  };
+
+  const handleFavoriteClick = () => {
+    if (!currentUser || currentRole === "guest") {
+      toast.info("Please sign in to save equipment to your favorites");
+      router.push(`/login?redirect=/equipment/${id}`);
+      return;
+    }
+    toggleFavorite(equipment.id);
+  };
+
+  if (isLoading && !equipment) {
+    return (
+      <div className="min-h-screen flex flex-col bg-[#F7F6F1]">
+        <Navbar />
+        <div className="flex-1 max-w-7xl mx-auto px-4 py-20 w-full animate-pulse space-y-6">
+          <div className="h-6 bg-[#EBEAE3] w-1/3" />
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+            <div className="lg:col-span-7 h-96 bg-[#EBEAE3] rounded-xs" />
+            <div className="lg:col-span-5 h-96 bg-[#EBEAE3] rounded-xs" />
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!equipment) {
+    return (
+      <div className="min-h-screen flex flex-col bg-[#F7F6F1]">
+        <Navbar />
+        <div className="flex-1 max-w-xl mx-auto px-4 py-24 text-center space-y-4">
+          <PackageOpen className="w-12 h-12 text-[#6A726B] mx-auto" />
+          <h1 className="font-heading text-2xl font-bold text-[#183C32]">Equipment Not Found</h1>
+          <p className="text-sm text-[#6A726B]">
+            The requested machinery record does not exist or may have been unlisted by the owner.
+          </p>
+          <Link
+            href="/equipment"
+            className="inline-block px-5 py-2.5 bg-[#183C32] text-white text-xs font-semibold rounded-xs hover:bg-[#245344]"
+          >
+            Browse Equipment Catalog
+          </Link>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F7F6F1]">
@@ -68,6 +145,18 @@ export default function EquipmentDetailsPage() {
           </div>
         </div>
 
+        {/* Audit Status Notice if unapproved */}
+        {equipment.status !== "active" && (
+          <div className="bg-amber-50 border-b border-amber-200 px-4 py-3">
+            <div className="max-w-7xl mx-auto flex items-center gap-2 text-xs text-amber-800">
+              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>
+                <strong>Listing Status ({equipment.status.toUpperCase()}):</strong> This machinery is currently undergoing quality and safety inspection. Bookings are temporarily paused until approved.
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Main Details Grid */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
@@ -80,7 +169,7 @@ export default function EquipmentDetailsPage() {
               <div className="bg-white p-6 sm:p-8 rounded-sm border border-[#E5E4DC] shadow-2xs space-y-4">
                 <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#D99A42]">
                   <FileText className="w-4 h-4" />
-                  <span>Technical & Operational Overview</span>
+                  <span>Technical &amp; Operational Overview</span>
                 </div>
                 <h2 className="font-heading text-2xl font-bold text-[#183C32]">
                   About This Machinery
@@ -96,19 +185,25 @@ export default function EquipmentDetailsPage() {
                   Technical Specifications
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {equipment.specifications.map((spec, index) => (
-                    <div
-                      key={index}
-                      className="p-3 rounded-xs bg-[#F7F6F1] border border-[#ECEBE3] flex flex-col justify-center"
-                    >
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-[#6A726B]">
-                        {spec.label}
-                      </span>
-                      <span className="font-heading text-sm font-semibold text-[#183C32] mt-0.5">
-                        {spec.value}
-                      </span>
+                  {equipment.specifications && equipment.specifications.length > 0 ? (
+                    equipment.specifications.map((spec, index) => (
+                      <div
+                        key={index}
+                        className="p-3 rounded-xs bg-[#F7F6F1] border border-[#ECEBE3] flex flex-col justify-center"
+                      >
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-[#6A726B]">
+                          {spec.label}
+                        </span>
+                        <span className="font-heading text-sm font-semibold text-[#183C32] mt-0.5">
+                          {spec.value}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-xs text-[#6A726B] col-span-2">
+                      Standard OEM specifications apply for {equipment.brand} {equipment.model}.
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
 
@@ -117,16 +212,23 @@ export default function EquipmentDetailsPage() {
                 <div className="flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 text-[#D99A42]" />
                   <h3 className="font-heading text-lg font-bold text-[#183C32]">
-                    Contractual Terms & Site Guidelines
+                    Contractual Terms &amp; Site Guidelines
                   </h3>
                 </div>
                 <ul className="space-y-2.5 text-xs sm:text-sm text-[#555E57]">
-                  {equipment.terms.map((term, i) => (
-                    <li key={i} className="flex items-start gap-2">
+                  {equipment.terms && equipment.terms.length > 0 ? (
+                    equipment.terms.map((term, i) => (
+                      <li key={i} className="flex items-start gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-[#2E6B4F] shrink-0 mt-0.5" />
+                        <span>{term}</span>
+                      </li>
+                    ))
+                  ) : (
+                    <li className="flex items-start gap-2">
                       <CheckCircle2 className="w-4 h-4 text-[#2E6B4F] shrink-0 mt-0.5" />
-                      <span>{term}</span>
+                      <span>Standard commercial contractor lease conditions apply.</span>
                     </li>
-                  ))}
+                  )}
                 </ul>
               </div>
             </div>
@@ -206,7 +308,7 @@ export default function EquipmentDetailsPage() {
                 {/* CTA Action Buttons */}
                 <div className="space-y-2.5">
                   <button
-                    onClick={() => setBookingModalOpen(true)}
+                    onClick={handleBookClick}
                     className="w-full py-3.5 bg-[#183C32] hover:bg-[#245344] text-[#F7F6F1] text-sm font-bold uppercase tracking-wider rounded-xs transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <Calendar className="w-4 h-4 text-[#D99A42]" />
@@ -214,7 +316,7 @@ export default function EquipmentDetailsPage() {
                   </button>
 
                   <button
-                    onClick={() => toggleFavorite(equipment.id)}
+                    onClick={handleFavoriteClick}
                     className={`w-full py-2.5 text-xs font-semibold rounded-xs border transition-colors flex items-center justify-center gap-2 cursor-pointer ${
                       favorited
                         ? "bg-[#D99A42] text-white border-[#D99A42]"
@@ -261,19 +363,16 @@ export default function EquipmentDetailsPage() {
                         {equipment.ownerName}
                       </h4>
                       {equipment.ownerVerified && (
-                        <span title="Verified Fleet Partner">
-                          <ShieldCheck className="w-4 h-4 text-[#2E6B4F]" />
-                        </span>
+                        <ShieldCheck className="w-4 h-4 text-[#2E6B4F]" />
                       )}
                     </div>
-                    <p className="text-xs text-[#6A726B]">Commercial Fleet Partner</p>
-                    <p className="text-[11px] text-[#2E6B4F] font-semibold mt-0.5">
-                      100% On-Time Dispatch Rate
-                    </p>
+                    <span className="text-xs text-[#6A726B]">
+                      Authorized Machinery Supplier
+                    </span>
                   </div>
                 </div>
 
-                <div className="pt-3 border-t border-[#ECEBE3] space-y-2 text-xs text-[#4A544E]">
+                <div className="pt-2 border-t border-[#ECEBE3] space-y-1.5 text-xs text-[#525B55]">
                   {equipment.ownerPhone && (
                     <div className="flex items-center gap-2">
                       <Phone className="w-3.5 h-3.5 text-[#8A948D]" />

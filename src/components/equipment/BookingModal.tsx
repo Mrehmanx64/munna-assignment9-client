@@ -8,11 +8,9 @@ import {
   Calendar,
   MapPin,
   Phone,
-  ShieldCheck,
   CheckCircle2,
-  FileText,
   AlertCircle,
-  Truck,
+  CreditCard,
 } from "lucide-react";
 import { Equipment } from "@/types";
 import { useApp } from "@/context/AppContext";
@@ -49,13 +47,11 @@ export function BookingModal({ equipment, onClose }: BookingModalProps) {
   const diffTime = end.getTime() - start.getTime();
   const diffDays = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
 
-  // Pricing calculations
+  // Estimated pricing calculation for preview (server is authoritative)
   const baseRentalSubtotal = equipment.rentalPrice * diffDays * quantity;
-  const damageWaiver = Math.round(baseRentalSubtotal * 0.08); // 8% standard damage waiver
-  const deliveryMobilizationFee = 150;
-  const totalAmount = baseRentalSubtotal + damageWaiver + deliveryMobilizationFee;
+  const estimatedTotal = baseRentalSubtotal;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -76,8 +72,8 @@ export function BookingModal({ equipment, onClose }: BookingModalProps) {
 
     setIsSubmitting(true);
 
-    setTimeout(() => {
-      addBooking({
+    try {
+      const checkoutUrl = await addBooking({
         equipmentId: equipment.id,
         equipmentTitle: equipment.title,
         equipmentImage: equipment.images[0],
@@ -94,41 +90,75 @@ export function BookingModal({ equipment, onClose }: BookingModalProps) {
         quantity,
         unitPrice: equipment.rentalPrice,
         rentalType: equipment.rentalType,
-        totalAmount,
-        paymentStatus: "paid",
-        bookingStatus: "confirmed",
+        totalAmount: estimatedTotal,
+        paymentStatus: "pending",
+        bookingStatus: "pending",
         deliveryAddress,
         notes,
       });
 
+      if (checkoutUrl) {
+        // Redirect directly to Stripe Checkout
+        window.location.href = checkoutUrl;
+      } else {
+        onClose();
+        router.push("/dashboard/customer");
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to initialize booking with server. Please try again.");
       setIsSubmitting(false);
-      onClose();
-      router.push("/dashboard/customer");
-    }, 600);
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-      <div className="relative w-full max-w-2xl bg-white rounded-sm border border-[#DCDBCF] shadow-2xl overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
+      <div className="relative w-full max-w-2xl bg-white rounded-sm border border-[#DCDBCF] shadow-2xl overflow-hidden my-8">
         {/* Modal Header */}
         <div className="bg-[#183C32] text-white px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Calendar className="w-5 h-5 text-[#D99A42]" />
-            <h2 className="font-heading text-lg font-bold">
-              Reserve Equipment &amp; Schedule Dispatch
-            </h2>
+            <h3 className="font-heading text-lg font-bold">
+              Reserve Equipment &amp; Stripe Escrow
+            </h3>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-xs hover:bg-[#245344] text-[#E5ECE8] transition-colors"
-            aria-label="Close booking modal"
+            className="p-1 text-white/70 hover:text-white rounded-xs transition-colors cursor-pointer"
+            aria-label="Close modal"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
+        {/* Selected Equipment Snapshot */}
+        <div className="p-4 bg-[#F7F6F1] border-b border-[#E5E4DC] flex items-center gap-4">
+          <div className="relative w-20 h-16 rounded-xs overflow-hidden shrink-0 border border-[#DCDBCF]">
+            <Image
+              src={equipment.images[0]}
+              alt={equipment.title}
+              fill
+              className="object-cover"
+            />
+          </div>
+          <div className="flex-1 min-w-0">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#D99A42]">
+              {equipment.category}
+            </span>
+            <h4 className="font-heading text-sm font-bold text-[#183C32] truncate">
+              {equipment.title}
+            </h4>
+            <div className="flex items-center gap-2 text-xs text-[#6A726B] mt-0.5">
+              <span>{equipment.brand} {equipment.model}</span>
+              <span>•</span>
+              <span className="font-semibold text-[#183C32]">
+                ${equipment.rentalPrice}/{equipment.rentalType}
+              </span>
+            </div>
+          </div>
+        </div>
+
         {/* Modal Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {error && (
             <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xs flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
@@ -136,38 +166,18 @@ export function BookingModal({ equipment, onClose }: BookingModalProps) {
             </div>
           )}
 
-          {/* Equipment Summary Banner */}
-          <div className="p-3.5 bg-[#F7F6F1] border border-[#E5E4DC] rounded-xs flex items-center gap-4">
-            <div className="relative w-16 h-12 rounded-xs overflow-hidden bg-[#EBEAE3] shrink-0 border border-[#DCDBCF]">
-              <Image
-                src={equipment.images[0]}
-                alt={equipment.title}
-                fill
-                sizes="64px"
-                className="object-cover"
-              />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="font-heading text-sm font-bold text-[#183C32] truncate">
-                {equipment.title}
-              </h3>
-              <p className="text-xs text-[#6A726B]">
-                {equipment.brand} • ${equipment.rentalPrice}/{equipment.rentalType} • {equipment.location}
-              </p>
-            </div>
-          </div>
-
           {/* Dates & Quantity Row */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label htmlFor="booking-start-date" className="block text-[11px] font-bold uppercase tracking-wider text-[#6A726B] mb-1">
-                Start Date
+                Mobilization (Start)
               </label>
               <input
                 id="booking-start-date"
                 type="date"
                 required
                 value={startDate}
+                min={new Date().toISOString().split("T")[0]}
                 onChange={(e) => setStartDate(e.target.value)}
                 className="w-full px-3 py-2 text-xs bg-[#F7F6F1] border border-[#E0DFD6] rounded-xs text-[#202824] focus:outline-hidden focus:border-[#183C32]"
               />
@@ -175,13 +185,14 @@ export function BookingModal({ equipment, onClose }: BookingModalProps) {
 
             <div>
               <label htmlFor="booking-end-date" className="block text-[11px] font-bold uppercase tracking-wider text-[#6A726B] mb-1">
-                End Date
+                Demobilization (End)
               </label>
               <input
                 id="booking-end-date"
                 type="date"
                 required
                 value={endDate}
+                min={startDate}
                 onChange={(e) => setEndDate(e.target.value)}
                 className="w-full px-3 py-2 text-xs bg-[#F7F6F1] border border-[#E0DFD6] rounded-xs text-[#202824] focus:outline-hidden focus:border-[#183C32]"
               />
@@ -189,25 +200,26 @@ export function BookingModal({ equipment, onClose }: BookingModalProps) {
 
             <div>
               <label htmlFor="booking-quantity" className="block text-[11px] font-bold uppercase tracking-wider text-[#6A726B] mb-1">
-                Quantity (Max {equipment.availableQuantity})
+                Quantity Units
               </label>
               <input
                 id="booking-quantity"
                 type="number"
-                min="1"
-                max={equipment.availableQuantity}
+                min={1}
+                max={Math.max(1, equipment.availableQuantity)}
+                required
                 value={quantity}
-                onChange={(e) => setQuantity(Math.min(equipment.availableQuantity, Math.max(1, Number(e.target.value))))}
+                onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
                 className="w-full px-3 py-2 text-xs bg-[#F7F6F1] border border-[#E0DFD6] rounded-xs text-[#202824] focus:outline-hidden focus:border-[#183C32]"
               />
             </div>
           </div>
 
-          {/* Contact & Delivery Row */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Dispatch Contact & Jobsite Address */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label htmlFor="booking-phone" className="block text-[11px] font-bold uppercase tracking-wider text-[#6A726B] mb-1">
-                Jobsite Phone Number
+                Field Superintendent Contact
               </label>
               <div className="relative">
                 <Phone className="w-3.5 h-3.5 text-[#8A948D] absolute left-2.5 top-2.5" />
@@ -263,33 +275,22 @@ export function BookingModal({ equipment, onClose }: BookingModalProps) {
               <span>Rental Period ({diffDays} Days × {quantity} Unit{quantity > 1 ? "s" : ""}):</span>
               <span className="font-semibold text-[#202824]">${baseRentalSubtotal}</span>
             </div>
-            <div className="flex justify-between text-[#555E57]">
-              <span className="flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5 text-[#2E6B4F]" />
-                Standard Damage Waiver (8%):
-              </span>
-              <span className="font-semibold text-[#202824]">${damageWaiver}</span>
-            </div>
-            <div className="flex justify-between text-[#555E57]">
-              <span className="flex items-center gap-1">
-                <Truck className="w-3.5 h-3.5 text-[#D99A42]" />
-                Jobsite Drop-off &amp; Mobilization:
-              </span>
-              <span className="font-semibold text-[#202824]">${deliveryMobilizationFee}</span>
-            </div>
             <div className="pt-2 border-t border-[#DCDBCF] flex justify-between items-baseline">
-              <span className="font-bold text-[#183C32] text-sm">Total Escrow Amount:</span>
+              <span className="font-bold text-[#183C32] text-sm">Estimated Total Amount:</span>
               <span className="font-heading font-extrabold text-[#183C32] text-lg">
-                ${totalAmount}
+                ${estimatedTotal}
               </span>
             </div>
+            <p className="text-[10px] text-[#8A948D]">
+              * Final authoritative billing duration and pricing are verified server-side.
+            </p>
           </div>
 
           {/* Legal / Policy Note */}
           <div className="flex items-start gap-2 text-[11px] text-[#6A726B]">
             <CheckCircle2 className="w-3.5 h-3.5 text-[#2E6B4F] shrink-0 mt-0.5" />
             <span>
-              By clicking Confirm, you accept the Standard Master Equipment Lease Agreement. Payment is held in secure contractor escrow until delivery inspection.
+              By proceeding, you initialize a verified Stripe Checkout session. Funds are held in escrow until rental completion.
             </span>
           </div>
 
@@ -299,7 +300,7 @@ export function BookingModal({ equipment, onClose }: BookingModalProps) {
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="px-4 py-2.5 text-xs font-semibold text-[#4A544E] hover:bg-[#EBEAE3] rounded-xs transition-colors"
+              className="px-4 py-2.5 text-xs font-semibold text-[#4A544E] hover:bg-[#EBEAE3] rounded-xs transition-colors cursor-pointer"
             >
               Cancel
             </button>
@@ -308,8 +309,8 @@ export function BookingModal({ equipment, onClose }: BookingModalProps) {
               disabled={isSubmitting}
               className="px-6 py-2.5 bg-[#183C32] hover:bg-[#245344] text-[#F7F6F1] text-xs font-bold uppercase tracking-wider rounded-xs transition-colors shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50"
             >
-              <FileText className="w-4 h-4 text-[#D99A42]" />
-              <span>{isSubmitting ? "Locking Booking..." : "Confirm & Place Booking"}</span>
+              <CreditCard className="w-4 h-4 text-[#D99A42]" />
+              <span>{isSubmitting ? "Connecting to Stripe..." : "Proceed to Stripe Checkout"}</span>
             </button>
           </div>
         </form>

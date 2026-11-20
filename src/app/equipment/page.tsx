@@ -16,6 +16,7 @@ import { EquipmentCard } from "@/components/equipment/EquipmentCard";
 import { EquipmentFilters } from "@/components/equipment/EquipmentFilters";
 import { useEquipmentFilter } from "@/hooks/useEquipmentFilter";
 import { useApp } from "@/context/AppContext";
+import { Equipment } from "@/types";
 
 function EquipmentCatalogContent() {
   const searchParams = useSearchParams();
@@ -32,6 +33,7 @@ function EquipmentCatalogContent() {
     resetCriteria,
     filteredEquipment,
     activeFiltersCount,
+    isLoading,
   } = useEquipmentFilter(equipmentList, {
     search: initialSearch,
     category: initialCategory,
@@ -190,9 +192,22 @@ function EquipmentCatalogContent() {
               )}
 
               {/* Equipment Cards Grid */}
-              {filteredEquipment.length > 0 ? (
+              {isLoading && filteredEquipment.length === 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredEquipment.map((equipment, index) => (
+                  {[1, 2, 3, 4, 5, 6].map((n) => (
+                    <div key={n} className="animate-pulse bg-white border border-[#E5E4DC] rounded-xs h-96 overflow-hidden">
+                      <div className="h-48 bg-[#EBEAE3]" />
+                      <div className="p-4 space-y-3">
+                        <div className="h-4 bg-[#EBEAE3] w-2/3" />
+                        <div className="h-3 bg-[#EBEAE3] w-1/2" />
+                        <div className="h-8 bg-[#EBEAE3] w-full mt-8" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : filteredEquipment.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredEquipment.map((equipment: Equipment, index: number) => (
                     <EquipmentCard
                       key={equipment.id}
                       equipment={equipment}
