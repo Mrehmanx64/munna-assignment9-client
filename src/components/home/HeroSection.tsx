@@ -14,6 +14,7 @@ import {
   Clock,
   Sparkles,
 } from "lucide-react";
+import { MotionReveal } from "@/components/shared/MotionReveal";
 
 export function HeroSection() {
   const router = useRouter();
@@ -39,35 +40,40 @@ export function HeroSection() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
           {/* Left Column: Editorial Headline & Search */}
           <div className="lg:col-span-7 space-y-8">
-            {/* Editorial Category Tag */}
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xs bg-[#EBEAE3] border border-[#DCDBCF] text-xs font-bold uppercase tracking-widest text-[#183C32]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#D99A42]" />
-              Industrial Fleet Marketplace
-              <span className="text-[#8A948D]">|</span>
-              <span className="text-[#59635C] font-semibold">Tier-1 Equipment</span>
-            </div>
+            <MotionReveal delay={0.1}>
+              {/* Editorial Category Tag */}
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xs bg-[#EBEAE3] border border-[#DCDBCF] text-xs font-bold uppercase tracking-widest text-[#183C32]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#D99A42]" />
+                Industrial Fleet Marketplace
+                <span className="text-[#8A948D]">|</span>
+                <span className="text-[#59635C] font-semibold">Tier-1 Equipment</span>
+              </div>
+            </MotionReveal>
 
             {/* Editorial Headline */}
-            <div className="space-y-2">
-              <h1 className="font-heading text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-[#183C32] leading-[1.08]">
-                Right Equipment.
-                <br />
-                <span className="text-[#202824]">Right When You</span>
-                <br />
-                <span className="italic font-serif text-[#183C32] underline decoration-[#D99A42] decoration-wavy decoration-2">
-                  Need It.
-                </span>
-              </h1>
-              <p className="pt-2 text-base sm:text-lg text-[#525B55] max-w-xl leading-relaxed font-normal">
-                Access reliable equipment for every project. Discover, compare, and rent from trusted equipment owners across heavy construction, cinema, agriculture, and high-demand power systems.
-              </p>
-            </div>
+            <MotionReveal delay={0.2}>
+              <div className="space-y-2">
+                <h1 className="font-heading text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-[#183C32] leading-[1.08]">
+                  Right Equipment.
+                  <br />
+                  <span className="text-[#202824]">Right When You</span>
+                  <br />
+                  <span className="italic font-serif text-[#183C32] underline decoration-[#D99A42] decoration-wavy decoration-2">
+                    Need It.
+                  </span>
+                </h1>
+                <p className="pt-2 text-base sm:text-lg text-[#525B55] max-w-xl leading-relaxed font-normal">
+                  Access reliable equipment for every project. Discover, compare, and rent from trusted equipment owners across heavy construction, cinema, agriculture, and high-demand power systems.
+                </p>
+              </div>
+            </MotionReveal>
 
             {/* Interactive Search Box */}
-            <form
-              onSubmit={handleSearch}
-              className="bg-white p-3 sm:p-4 rounded-sm border border-[#DCDBCF] shadow-sm max-w-2xl"
-            >
+            <MotionReveal delay={0.3}>
+              <form
+                onSubmit={handleSearch}
+                className="bg-white p-3 sm:p-4 rounded-sm border border-[#DCDBCF] shadow-sm max-w-2xl"
+              >
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {/* Keyword */}
                 <div className="relative">
@@ -152,6 +158,7 @@ export function HeroSection() {
                 </button>
               </div>
             </form>
+            </MotionReveal>
 
             {/* Direct CTA Buttons */}
             <div className="flex flex-wrap items-center gap-4 pt-1">
@@ -175,6 +182,7 @@ export function HeroSection() {
 
           {/* Right Column: Asymmetric Industrial Hero Photography */}
           <div className="lg:col-span-5 relative">
+            <MotionReveal delay={0.3} direction="left">
             <div className="relative mx-auto max-w-md lg:max-w-none">
               {/* Primary Large Image */}
               <div className="relative h-[430px] sm:h-[480px] w-full rounded-sm overflow-hidden border border-[#DCDBCF] shadow-lg bg-[#EAE8DE]">
@@ -237,6 +245,7 @@ export function HeroSection() {
                 <span>$2.5M Commercial COI</span>
               </div>
             </div>
+            </MotionReveal>
           </div>
         </div>
 

@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { EquipmentCard } from "@/components/equipment/EquipmentCard";
+import { MotionReveal } from "@/components/shared/MotionReveal";
 import { useApp } from "@/context/AppContext";
 
 export function FeaturedSection() {
@@ -72,11 +73,12 @@ export function FeaturedSection() {
         {/* Equipment Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
           {filteredEquipment.map((equipment, index) => (
-            <EquipmentCard
-              key={equipment.id}
-              equipment={equipment}
-              priority={index < 3}
-            />
+            <MotionReveal key={equipment.id} delay={index * 0.1}>
+              <EquipmentCard
+                equipment={equipment}
+                priority={index < 3}
+              />
+            </MotionReveal>
           ))}
         </div>
 
