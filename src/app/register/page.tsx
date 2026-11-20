@@ -88,34 +88,11 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      // Optional call to backend if server is running
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 1500);
-      try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL
-          ? `${process.env.NEXT_PUBLIC_API_URL}/auth/register`
-          : "http://localhost:5000/api/auth/register";
-        await fetch(apiUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: fullName.trim(),
-            email: email.trim().toLowerCase(),
-            password,
-            role,
-          }),
-          signal: controller.signal,
-        });
-      } catch {
-        // Fallback gracefully if server is offline or slower than 1.5s
-      } finally {
-        clearTimeout(timeoutId);
-      }
-
-      // Register into AppContext & persistent store
-      const registered = registerUser({
+      // Register into AppContext & backend via authApi
+      const registered = await registerUser({
         name: fullName.trim(),
         email: email.trim().toLowerCase(),
+        password,
         role,
         avatarUrl,
       });

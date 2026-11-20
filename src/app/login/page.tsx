@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Eye,
   EyeOff,
@@ -18,18 +18,20 @@ import { useApp } from "@/context/AppContext";
 import { UserRole } from "@/types";
 import { toast } from "sonner";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectUrl = searchParams.get("redirect");
   const { loginUser } = useApp();
 
   const [email, setEmail] = useState("alexander.hayes@apexbuild.com");
-  const [password, setPassword] = useState("••••••••••••");
+  const [password, setPassword] = useState("Password@1234");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -40,8 +42,7 @@ export default function LoginPage() {
 
     setIsLoading(true);
 
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
       // Auto-detect role or default customer
       let detectedRole: UserRole = "customer";
       if (email.includes("owner") || email.includes("marcus")) {
@@ -50,20 +51,30 @@ export default function LoginPage() {
         detectedRole = "admin";
       }
 
-      loginUser(email, detectedRole);
+      const user = await loginUser(email, password, detectedRole);
+      setIsLoading(false);
+      toast.success("Signed in successfully to Rentora!");
 
-      if (detectedRole === "owner") {
+      if (redirectUrl) {
+        router.push(redirectUrl);
+        return;
+      }
+
+      const roleToRoute = user?.role || detectedRole;
+      if (roleToRoute === "owner") {
         router.push("/dashboard/owner");
-      } else if (detectedRole === "admin") {
+      } else if (roleToRoute === "admin") {
         router.push("/dashboard/admin");
       } else {
         router.push("/dashboard/customer");
       }
-      toast.success("Signed in successfully to Rentora!");
-    }, 600);
+    } catch (err: any) {
+      setIsLoading(false);
+      setError(err?.response?.data?.message || err?.message || "Failed to sign in. Please verify credentials.");
+    }
   };
 
-  const handleQuickRole = (role: UserRole) => {
+  const handleQuickRole = async (role: UserRole) => {
     let emailToUse = "alexander.hayes@apexbuild.com";
     if (role === "owner") {
       emailToUse = "marcus@vanceheavygear.com";
@@ -71,8 +82,13 @@ export default function LoginPage() {
       emailToUse = "elena.admin@rentora.internal";
     }
     setEmail(emailToUse);
-    loginUser(emailToUse, role);
-    router.push(`/dashboard/${role}`);
+    setPassword("Password@1234");
+    await loginUser(emailToUse, "Password@1234", role);
+    if (redirectUrl) {
+      router.push(redirectUrl);
+    } else {
+      router.push(`/dashboard/${role}`);
+    }
   };
 
   return (
@@ -320,5 +336,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#F7F6F1]" />}>
+      <LoginForm />
+    </Suspense>
   );
 }
