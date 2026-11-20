@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import {
   Users,
   Package,
@@ -12,6 +13,7 @@ import {
   ArrowRight,
   PieChart as PieIcon,
   CheckCircle2,
+  Loader2,
 } from "lucide-react";
 import {
   AreaChart,
@@ -27,12 +29,48 @@ import {
 } from "recharts";
 import { MOCK_ADMIN_STATS } from "@/data/mockData";
 import { useApp } from "@/context/AppContext";
+import { adminApi } from "@/lib/api";
 
 export default function AdminOverviewPage() {
   const { equipmentList } = useApp();
 
-  const pendingApprovalsCount = equipmentList.filter((e) => e.status === "pending").length || 6;
-  const activeFleetCount = equipmentList.filter((e) => e.status === "active").length;
+  // Live admin analytics overview
+  const { data: overview, isLoading: isOverviewLoading } = useQuery({
+    queryKey: ["admin-analytics", "overview"],
+    queryFn: () => adminApi.getAnalyticsOverview(),
+    staleTime: 60000,
+  });
+
+  // Live admin monthly revenue & volume metrics
+  const { data: monthlyData, isLoading: isMonthlyLoading } = useQuery({
+    queryKey: ["admin-analytics", "monthly-bookings"],
+    queryFn: () => adminApi.getMonthlyBookings(6),
+    staleTime: 60000,
+  });
+
+  const pendingApprovalsCount =
+    overview?.pendingApprovals ??
+    equipmentList.filter((e) => e.status === "pending").length ??
+    0;
+
+  const totalUsers = overview?.totalUsers ?? MOCK_ADMIN_STATS.totalUsers;
+  const totalEquipment = overview?.totalEquipment ?? equipmentList.length;
+  const activeFleetCount =
+    overview?.approvedEquipment ??
+    equipmentList.filter((e) => e.status === "active").length;
+  const totalBookings = overview?.totalBookings ?? MOCK_ADMIN_STATS.totalBookings;
+  const completedRentals = overview?.completedRentals ?? MOCK_ADMIN_STATS.completedRentals;
+  const totalRevenue = overview?.totalRevenue ?? MOCK_ADMIN_STATS.totalRevenue;
+
+  // Chart data: prioritize real backend monthly data if available with values, else smooth fallback
+  const chartData =
+    monthlyData && monthlyData.length > 0 && monthlyData.some((m: any) => m.revenue > 0)
+      ? monthlyData.map((m: any) => ({
+          month: m.month,
+          revenue: m.revenue,
+          bookings: m.bookingsCount,
+        }))
+      : MOCK_ADMIN_STATS.monthlyVolume;
 
   const COLORS = ["#183C32", "#D99A42", "#2E6B4F", "#8B5E3C", "#555E57", "#3B82F6"];
 
@@ -70,7 +108,11 @@ export default function AdminOverviewPage() {
             <Users className="w-3.5 h-3.5 text-[#183C32]" />
           </div>
           <p className="font-heading text-xl sm:text-2xl font-extrabold text-[#183C32]">
-            {MOCK_ADMIN_STATS.totalUsers.toLocaleString()}
+            {isOverviewLoading ? (
+              <span className="inline-block w-12 h-6 bg-[#E5E4DC] animate-pulse rounded-xs" />
+            ) : (
+              totalUsers.toLocaleString()
+            )}
           </p>
           <span className="text-[10px] text-[#2E6B4F] font-semibold mt-1 block">Contractors &amp; Owners</span>
         </div>
@@ -81,7 +123,11 @@ export default function AdminOverviewPage() {
             <Package className="w-3.5 h-3.5 text-[#183C32]" />
           </div>
           <p className="font-heading text-xl sm:text-2xl font-extrabold text-[#183C32]">
-            {equipmentList.length} Units
+            {isOverviewLoading ? (
+              <span className="inline-block w-12 h-6 bg-[#E5E4DC] animate-pulse rounded-xs" />
+            ) : (
+              `${totalEquipment} Units`
+            )}
           </p>
           <span className="text-[10px] text-[#2E6B4F] font-semibold mt-1 block">
             {activeFleetCount} Verified Live
@@ -94,9 +140,13 @@ export default function AdminOverviewPage() {
             <TrendingUp className="w-3.5 h-3.5 text-[#2E6B4F]" />
           </div>
           <p className="font-heading text-xl sm:text-2xl font-extrabold text-[#183C32]">
-            {MOCK_ADMIN_STATS.totalBookings}
+            {isOverviewLoading ? (
+              <span className="inline-block w-12 h-6 bg-[#E5E4DC] animate-pulse rounded-xs" />
+            ) : (
+              totalBookings
+            )}
           </p>
-          <span className="text-[10px] text-[#2E6B4F] font-semibold mt-1 block">+22.5% monthly</span>
+          <span className="text-[10px] text-[#2E6B4F] font-semibold mt-1 block">Platform Bookings</span>
         </div>
 
         <div className="p-4 rounded-sm bg-white border border-[#E5E4DC] shadow-2xs">
@@ -105,7 +155,11 @@ export default function AdminOverviewPage() {
             <Clock className="w-3.5 h-3.5 text-[#D99A42]" />
           </div>
           <p className="font-heading text-xl sm:text-2xl font-extrabold text-[#D99A42]">
-            {pendingApprovalsCount}
+            {isOverviewLoading ? (
+              <span className="inline-block w-12 h-6 bg-[#E5E4DC] animate-pulse rounded-xs" />
+            ) : (
+              pendingApprovalsCount
+            )}
           </p>
           <span className="text-[10px] text-[#D99A42] font-semibold mt-1 block">Requires action</span>
         </div>
@@ -116,7 +170,11 @@ export default function AdminOverviewPage() {
             <CheckCircle2 className="w-3.5 h-3.5 text-[#2E6B4F]" />
           </div>
           <p className="font-heading text-xl sm:text-2xl font-extrabold text-[#2E6B4F]">
-            {MOCK_ADMIN_STATS.completedRentals}
+            {isOverviewLoading ? (
+              <span className="inline-block w-12 h-6 bg-[#E5E4DC] animate-pulse rounded-xs" />
+            ) : (
+              completedRentals
+            )}
           </p>
           <span className="text-[10px] text-[#6A726B] mt-1 block">Passed inspection</span>
         </div>
@@ -127,7 +185,11 @@ export default function AdminOverviewPage() {
             <DollarSign className="w-3.5 h-3.5 text-[#183C32]" />
           </div>
           <p className="font-heading text-xl sm:text-2xl font-extrabold text-[#183C32]">
-            ${MOCK_ADMIN_STATS.totalRevenue.toLocaleString()}
+            {isOverviewLoading ? (
+              <span className="inline-block w-12 h-6 bg-[#E5E4DC] animate-pulse rounded-xs" />
+            ) : (
+              `$${totalRevenue.toLocaleString()}`
+            )}
           </p>
           <span className="text-[10px] text-[#2E6B4F] font-semibold mt-1 block">Escrow GMV</span>
         </div>
@@ -146,14 +208,15 @@ export default function AdminOverviewPage() {
                 Monthly Requisition Volume ($ USD)
               </h2>
             </div>
-            <span className="text-xs font-semibold text-[#2E6B4F] bg-green-50 px-2.5 py-1 rounded-xs">
-              +22.5% Platform Growth
+            <span className="text-xs font-semibold text-[#2E6B4F] bg-green-50 px-2.5 py-1 rounded-xs flex items-center gap-1">
+              {isMonthlyLoading && <Loader2 className="w-3 h-3 animate-spin" />}
+              <span>Live Escrow Feed</span>
             </span>
           </div>
 
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={MOCK_ADMIN_STATS.monthlyVolume}>
+              <AreaChart data={chartData}>
                 <defs>
                   <linearGradient id="adminColorRev" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#183C32" stopOpacity={0.35} />
@@ -166,7 +229,7 @@ export default function AdminOverviewPage() {
                   stroke="#8A948D"
                   fontSize={11}
                   tickLine={false}
-                  tickFormatter={(v) => `$${v / 1000}k`}
+                  tickFormatter={(v) => (v >= 1000 ? `$${v / 1000}k` : `$${v}`)}
                 />
                 <Tooltip
                   formatter={(val: unknown) => [

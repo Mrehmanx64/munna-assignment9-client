@@ -2,18 +2,40 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import {
   Truck,
   Search,
+  Loader2,
+  PackageOpen,
 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
+import { RentalBooking } from "@/types";
+import { adminApi } from "@/lib/api";
 
 export default function AdminAllRentalsPage() {
-  const { bookings } = useApp();
+  const { bookings: contextBookings } = useApp();
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
 
-  const filtered = bookings.filter((b) => {
+  // Query live admin platform bookings
+  const { data, isLoading } = useQuery({
+    queryKey: ["admin-bookings"],
+    queryFn: () => adminApi.getBookings(),
+    staleTime: 30000,
+  });
+
+  const liveBookings: RentalBooking[] = data?.bookings || [];
+  const mergedMap = new Map<string, RentalBooking>();
+  for (const b of [...liveBookings, ...contextBookings]) {
+    if (b && b.id && !mergedMap.has(b.id)) {
+      mergedMap.set(b.id, b);
+    }
+  }
+
+  const allBookings = Array.from(mergedMap.values());
+
+  const filtered = allBookings.filter((b) => {
     if (statusFilter !== "all" && b.bookingStatus !== statusFilter) return false;
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -27,7 +49,7 @@ export default function AdminAllRentalsPage() {
     return true;
   });
 
-  const totalGMV = bookings.reduce((acc, b) => acc + b.totalAmount, 0);
+  const totalGMV = allBookings.reduce((acc, b) => acc + b.totalAmount, 0);
 
   return (
     <div className="space-y-6">
@@ -87,87 +109,106 @@ export default function AdminAllRentalsPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-sm border border-[#E5E4DC] shadow-2xs overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-[#EBEAE3] border-b border-[#DCDBCF] text-[#4A544E] uppercase font-bold text-[10px] tracking-wider">
-              <tr>
-                <th className="py-3 px-4">Lease ID &amp; Contractor</th>
-                <th className="py-3 px-4">Equipment &amp; Category</th>
-                <th className="py-3 px-4">Fleet Owner</th>
-                <th className="py-3 px-4">Rental Duration</th>
-                <th className="py-3 px-4">Escrow Amount</th>
-                <th className="py-3 px-4">Payment</th>
-                <th className="py-3 px-4 text-right">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#ECEBE3]">
-              {filtered.map((b) => (
-                <tr key={b.id} className="hover:bg-[#F7F6F1] transition-colors">
-                  <td className="py-3.5 px-4">
-                    <span className="font-mono text-[10px] text-[#8A948D] block">{b.id}</span>
-                    <span className="font-bold text-[#183C32] block">{b.customerName}</span>
-                    <span className="text-[10px] text-[#6A726B]">{b.customerEmail}</span>
-                  </td>
-
-                  <td className="py-3.5 px-4">
-                    <Link
-                      href={`/equipment/${b.equipmentId}`}
-                      className="font-semibold text-[#202824] hover:underline block max-w-xs truncate"
-                    >
-                      {b.equipmentTitle}
-                    </Link>
-                    <span className="text-[10px] text-[#6A726B]">
-                      {b.equipmentCategory} • Qty: {b.quantity}
-                    </span>
-                  </td>
-
-                  <td className="py-3.5 px-4">
-                    <span className="font-medium text-[#183C32]">{b.ownerName}</span>
-                  </td>
-
-                  <td className="py-3.5 px-4">
-                    <span className="font-semibold text-[#202824] block">
-                      {b.startDate} to {b.endDate}
-                    </span>
-                    <span className="text-[10px] text-[#8A948D] font-mono">{b.durationText}</span>
-                  </td>
-
-                  <td className="py-3.5 px-4 font-heading font-extrabold text-sm text-[#183C32]">
-                    ${b.totalAmount.toLocaleString()}
-                  </td>
-
-                  <td className="py-3.5 px-4">
-                    <span
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-xs text-[10px] font-bold uppercase tracking-wider ${
-                        b.paymentStatus === "paid"
-                          ? "bg-green-100 text-green-800"
-                          : "bg-amber-100 text-amber-800"
-                      }`}
-                    >
-                      {b.paymentStatus}
-                    </span>
-                  </td>
-
-                  <td className="py-3.5 px-4 text-right">
-                    <span
-                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-xs text-[10px] font-bold uppercase tracking-wider ${
-                        b.bookingStatus === "confirmed"
-                          ? "bg-[#183C32] text-white"
-                          : b.bookingStatus === "completed"
-                          ? "bg-[#EBEAE3] text-[#183C32]"
-                          : "bg-amber-100 text-amber-800"
-                      }`}
-                    >
-                      {b.bookingStatus}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {isLoading ? (
+        <div className="p-8 bg-white border border-[#E5E4DC] rounded-sm text-center">
+          <Loader2 className="w-6 h-6 animate-spin text-[#183C32] mx-auto mb-2" />
+          <p className="text-xs text-[#6A726B]">Loading master escrow ledger...</p>
         </div>
-      </div>
+      ) : filtered.length > 0 ? (
+        <div className="bg-white rounded-sm border border-[#E5E4DC] shadow-2xs overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-[#EBEAE3] border-b border-[#DCDBCF] text-[#4A544E] uppercase font-bold text-[10px] tracking-wider">
+                <tr>
+                  <th className="py-3 px-4">Lease ID &amp; Contractor</th>
+                  <th className="py-3 px-4">Equipment &amp; Category</th>
+                  <th className="py-3 px-4">Fleet Owner</th>
+                  <th className="py-3 px-4">Rental Duration</th>
+                  <th className="py-3 px-4">Escrow Amount</th>
+                  <th className="py-3 px-4">Payment</th>
+                  <th className="py-3 px-4 text-right">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#ECEBE3]">
+                {filtered.map((b) => (
+                  <tr key={b.id} className="hover:bg-[#F7F6F1] transition-colors">
+                    <td className="py-3.5 px-4">
+                      <span className="font-mono text-[10px] text-[#8A948D] block">{b.id}</span>
+                      <span className="font-bold text-[#183C32] block">{b.customerName}</span>
+                      <span className="text-[10px] text-[#6A726B]">{b.customerEmail}</span>
+                    </td>
+
+                    <td className="py-3.5 px-4">
+                      <Link
+                        href={`/equipment/${b.equipmentId}`}
+                        className="font-semibold text-[#202824] hover:underline block max-w-xs truncate"
+                      >
+                        {b.equipmentTitle}
+                      </Link>
+                      <span className="text-[10px] text-[#6A726B]">
+                        {b.equipmentCategory} • Qty: {b.quantity}
+                      </span>
+                    </td>
+
+                    <td className="py-3.5 px-4">
+                      <span className="font-medium text-[#183C32]">{b.ownerName}</span>
+                    </td>
+
+                    <td className="py-3.5 px-4">
+                      <span className="font-semibold text-[#202824] block">
+                        {b.startDate} to {b.endDate}
+                      </span>
+                      <span className="text-[10px] text-[#8A948D] font-mono">{b.durationText}</span>
+                    </td>
+
+                    <td className="py-3.5 px-4 font-heading font-extrabold text-sm text-[#183C32]">
+                      ${b.totalAmount.toLocaleString()}
+                    </td>
+
+                    <td className="py-3.5 px-4">
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-xs text-[10px] font-bold uppercase tracking-wider ${
+                          b.paymentStatus === "paid"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-amber-100 text-amber-800"
+                        }`}
+                      >
+                        {b.paymentStatus}
+                      </span>
+                    </td>
+
+                    <td className="py-3.5 px-4 text-right">
+                      <span
+                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-xs text-[10px] font-bold uppercase tracking-wider ${
+                          b.bookingStatus === "confirmed"
+                            ? "bg-[#183C32] text-white"
+                            : b.bookingStatus === "completed"
+                            ? "bg-[#EBEAE3] text-[#183C32]"
+                            : "bg-amber-100 text-amber-800"
+                        }`}
+                      >
+                        {b.bookingStatus}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-white p-12 rounded-sm border border-[#E5E4DC] text-center space-y-4">
+          <div className="w-14 h-14 rounded-full bg-[#EBEAE3] text-[#6A726B] flex items-center justify-center mx-auto">
+            <PackageOpen className="w-7 h-7" />
+          </div>
+          <h3 className="font-heading text-lg font-bold text-[#183C32]">
+            No platform leases match this filter
+          </h3>
+          <p className="text-xs sm:text-sm text-[#6A726B] max-w-md mx-auto">
+            All current contracts and requisitions are catalogued in the system.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
