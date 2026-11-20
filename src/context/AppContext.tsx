@@ -18,6 +18,16 @@ interface AppContextType {
   currentUser: User | null;
   currentRole: UserRole | "guest";
   setCurrentRole: (role: UserRole | "guest") => void;
+  registerUser: (userData: {
+    name: string;
+    email: string;
+    role: UserRole;
+    avatarUrl?: string;
+    phone?: string;
+    address?: string;
+  }) => User;
+  loginUser: (email: string, role?: UserRole) => User | null;
+  logout: () => void;
   favorites: string[];
   toggleFavorite: (equipmentId: string) => void;
   isFavorite: (equipmentId: string) => boolean;
@@ -45,7 +55,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         // Ignore
       }
     }
-    return "customer";
+    return "guest";
+  });
+
+  const [registeredUser, setRegisteredUser] = useState<User | null>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("rentora_active_user");
+        if (saved) return JSON.parse(saved);
+      } catch {
+        // Ignore
+      }
+    }
+    return null;
   });
 
   const [favorites, setFavorites] = useState<string[]>(() => {
@@ -74,14 +96,90 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (role === "guest") {
       toast.info("Switched to Guest mode (logged out)");
     } else {
-      const u = users.find((usr) => usr.role === role);
+      const u =
+        registeredUser && registeredUser.role === role
+          ? registeredUser
+          : users.find((usr) => usr.role === role);
       toast.success(`Switched active view to ${role.toUpperCase()}: ${u?.name || role}`);
     }
   };
 
-  const currentUser = currentRole === "guest"
-    ? null
-    : users.find((u) => u.role === currentRole) || users[0];
+  const registerUser = (userData: {
+    name: string;
+    email: string;
+    role: UserRole;
+    avatarUrl?: string;
+    phone?: string;
+    address?: string;
+  }): User => {
+    const newUser: User = {
+      id: `usr-${Date.now().toString().slice(-6)}`,
+      name: userData.name,
+      email: userData.email,
+      role: userData.role,
+      avatarUrl:
+        userData.avatarUrl ||
+        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80",
+      phone: userData.phone || "+1 (555) 234-5678",
+      address: userData.address || "Industrial Way, Suite 400",
+      joinedDate: "Today",
+      totalRentals: 0,
+    };
+
+    setUsers((prev) => [newUser, ...prev.filter((u) => u.email !== newUser.email)]);
+    setRegisteredUser(newUser);
+    setRoleState(userData.role);
+
+    try {
+      localStorage.setItem("rentora_active_user", JSON.stringify(newUser));
+      localStorage.setItem("rentora_role", userData.role);
+    } catch {
+      // Ignore
+    }
+
+    return newUser;
+  };
+
+  const loginUser = (email: string, role?: UserRole): User | null => {
+    const found = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+    const targetRole = role || found?.role || "customer";
+    const userToUse =
+      found ||
+      (registeredUser && registeredUser.email.toLowerCase() === email.toLowerCase()
+        ? registeredUser
+        : users.find((u) => u.role === targetRole) || users[0]);
+
+    setRegisteredUser(userToUse);
+    setRoleState(targetRole);
+
+    try {
+      localStorage.setItem("rentora_active_user", JSON.stringify(userToUse));
+      localStorage.setItem("rentora_role", targetRole);
+    } catch {
+      // Ignore
+    }
+
+    return userToUse;
+  };
+
+  const logout = () => {
+    setRegisteredUser(null);
+    setRoleState("guest");
+    try {
+      localStorage.removeItem("rentora_active_user");
+      localStorage.setItem("rentora_role", "guest");
+    } catch {
+      // Ignore
+    }
+    toast.info("Signed out to Guest mode");
+  };
+
+  const currentUser =
+    currentRole === "guest"
+      ? null
+      : registeredUser && registeredUser.role === currentRole
+      ? registeredUser
+      : users.find((u) => u.role === currentRole) || users[0];
 
   const toggleFavorite = (equipmentId: string) => {
     setFavorites((prev) => {
@@ -172,6 +270,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         currentUser,
         currentRole,
         setCurrentRole,
+        registerUser,
+        loginUser,
+        logout,
         favorites,
         toggleFavorite,
         isFavorite,

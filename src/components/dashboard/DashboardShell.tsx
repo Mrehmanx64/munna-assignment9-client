@@ -32,7 +32,7 @@ interface DashboardShellProps {
 export function DashboardShell({ children }: DashboardShellProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { currentUser, currentRole, setCurrentRole, favorites, bookings } = useApp();
+  const { currentUser, currentRole, setCurrentRole, logout, favorites, bookings } = useApp();
 
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -204,7 +204,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
 
           <button
             onClick={() => {
-              setCurrentRole("guest");
+              logout();
               router.push("/login");
             }}
             className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-[#D14545] hover:bg-red-950/40 rounded-xs transition-colors cursor-pointer"
@@ -344,7 +344,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
                   <div className="border-t border-[#ECEBE3] pt-1">
                     <button
                       onClick={() => {
-                        setCurrentRole("guest");
+                        logout();
                         router.push("/");
                       }}
                       className="w-full text-left px-4 py-1.5 text-xs text-red-600 hover:bg-red-50 font-semibold"

@@ -24,7 +24,7 @@ import { toast } from "sonner";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { setCurrentRole } = useApp();
+  const { registerUser } = useApp();
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -39,7 +39,29 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const fillQuickDemo = (demoRole: UserRole) => {
+    if (demoRole === "customer") {
+      setFullName("Devin Vance");
+      setEmail(`devin.${Date.now().toString().slice(-4)}@apexrenter.com`);
+      setRole("customer");
+      setAvatarUrl("https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80");
+      setPassword("Pass@12345");
+      setConfirmPassword("Pass@12345");
+      setTermsAgreed(true);
+      setError(null);
+    } else {
+      setFullName("Valerie Sterling");
+      setEmail(`valerie.${Date.now().toString().slice(-4)}@sterlingheavy.com`);
+      setRole("owner");
+      setAvatarUrl("https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80");
+      setPassword("Pass@12345");
+      setConfirmPassword("Pass@12345");
+      setTermsAgreed(true);
+      setError(null);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -65,16 +87,48 @@ export default function RegisterPage() {
 
     setIsLoading(true);
 
-    setTimeout(() => {
-      setIsLoading(false);
-      setCurrentRole(role);
-      toast.success(`Account registered successfully as ${role.toUpperCase()}!`);
+    try {
+      // Optional call to backend if server is running
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 1500);
+      try {
+        await fetch("http://localhost:5000/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: fullName.trim(),
+            email: email.trim().toLowerCase(),
+            password,
+            role,
+          }),
+          signal: controller.signal,
+        });
+      } catch {
+        // Fallback gracefully if server is offline or slower than 1.5s
+      } finally {
+        clearTimeout(timeoutId);
+      }
+
+      // Register into AppContext & persistent store
+      const registered = registerUser({
+        name: fullName.trim(),
+        email: email.trim().toLowerCase(),
+        role,
+        avatarUrl,
+      });
+
+      toast.success(`Account registered successfully as ${role.toUpperCase()}! Welcome, ${registered.name}.`);
       if (role === "owner") {
         router.push("/dashboard/owner");
       } else {
         router.push("/dashboard/customer");
       }
-    }, 700);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to register account.";
+      setError(msg);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -108,6 +162,27 @@ export default function RegisterPage() {
               <span>{error}</span>
             </div>
           )}
+
+          {/* Quick Demo Autofill Bar for Instant Testing */}
+          <div className="bg-[#EBEAE3] p-2.5 rounded-xs border border-[#DCDBCF] flex flex-col sm:flex-row items-center justify-between gap-2 text-xs">
+            <span className="text-[11px] font-semibold text-[#525B55]">Testing shortcuts:</span>
+            <div className="flex items-center gap-1.5 w-full sm:w-auto">
+              <button
+                type="button"
+                onClick={() => fillQuickDemo("customer")}
+                className="flex-1 sm:flex-initial px-2.5 py-1 text-[11px] font-semibold bg-white border border-[#DCDBCF] hover:border-[#183C32] text-[#183C32] rounded-xs transition-colors cursor-pointer"
+              >
+                Auto-fill Customer
+              </button>
+              <button
+                type="button"
+                onClick={() => fillQuickDemo("owner")}
+                className="flex-1 sm:flex-initial px-2.5 py-1 text-[11px] font-semibold bg-white border border-[#DCDBCF] hover:border-[#183C32] text-[#183C32] rounded-xs transition-colors cursor-pointer"
+              >
+                Auto-fill Owner
+              </button>
+            </div>
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Account Role Selection */}

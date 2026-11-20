@@ -20,7 +20,7 @@ import { toast } from "sonner";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { setCurrentRole } = useApp();
+  const { loginUser } = useApp();
 
   const [email, setEmail] = useState("alexander.hayes@apexbuild.com");
   const [password, setPassword] = useState("••••••••••••");
@@ -43,32 +43,36 @@ export default function LoginPage() {
     setTimeout(() => {
       setIsLoading(false);
       // Auto-detect role or default customer
+      let detectedRole: UserRole = "customer";
       if (email.includes("owner") || email.includes("marcus")) {
-        setCurrentRole("owner");
-        router.push("/dashboard/owner");
+        detectedRole = "owner";
       } else if (email.includes("admin") || email.includes("elena")) {
-        setCurrentRole("admin");
+        detectedRole = "admin";
+      }
+
+      loginUser(email, detectedRole);
+
+      if (detectedRole === "owner") {
+        router.push("/dashboard/owner");
+      } else if (detectedRole === "admin") {
         router.push("/dashboard/admin");
       } else {
-        setCurrentRole("customer");
         router.push("/dashboard/customer");
       }
       toast.success("Signed in successfully to Rentora!");
-    }, 700);
+    }, 600);
   };
 
   const handleQuickRole = (role: UserRole) => {
-    setCurrentRole(role);
-    if (role === "customer") {
-      setEmail("alexander.hayes@apexbuild.com");
-      router.push("/dashboard/customer");
-    } else if (role === "owner") {
-      setEmail("marcus@vanceheavygear.com");
-      router.push("/dashboard/owner");
-    } else {
-      setEmail("elena.admin@rentora.internal");
-      router.push("/dashboard/admin");
+    let emailToUse = "alexander.hayes@apexbuild.com";
+    if (role === "owner") {
+      emailToUse = "marcus@vanceheavygear.com";
+    } else if (role === "admin") {
+      emailToUse = "elena.admin@rentora.internal";
     }
+    setEmail(emailToUse);
+    loginUser(emailToUse, role);
+    router.push(`/dashboard/${role}`);
   };
 
   return (
