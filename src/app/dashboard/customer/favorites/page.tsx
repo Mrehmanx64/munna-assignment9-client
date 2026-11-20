@@ -3,6 +3,7 @@
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import {
   Bookmark,
   Trash2,
@@ -13,11 +14,36 @@ import {
   PackageOpen,
 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
+import { favoriteApi } from "@/lib/api";
+import { Equipment } from "@/types";
 
 export default function CustomerFavoritesPage() {
   const { favorites, toggleFavorite, equipmentList } = useApp();
 
-  const savedEquipment = equipmentList.filter((eq) => favorites.includes(eq.id));
+  // Fetch real backend favorites
+  const { data, isLoading } = useQuery({
+    queryKey: ["customer-favorites"],
+    queryFn: () => favoriteApi.getFavorites(),
+    staleTime: 30000,
+  });
+
+  // Extract equipment from backend favorites
+  const backendEquipment: Equipment[] = (data?.favorites || [])
+    .map((fav: any) => fav.equipment)
+    .filter(Boolean);
+
+  // Combine with locally saved favorites if not already present
+  const localEquipment = equipmentList.filter((eq) => favorites.includes(eq.id));
+
+  // Merge uniquely by equipment ID
+  const equipmentMap = new Map<string, Equipment>();
+  for (const eq of [...backendEquipment, ...localEquipment]) {
+    if (eq && eq.id && !equipmentMap.has(eq.id)) {
+      equipmentMap.set(eq.id, eq);
+    }
+  }
+
+  const savedEquipment = Array.from(equipmentMap.values());
 
   return (
     <div className="space-y-6">
@@ -46,7 +72,21 @@ export default function CustomerFavoritesPage() {
       </div>
 
       {/* Grid of Saved Items */}
-      {savedEquipment.length > 0 ? (
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div
+              key={i}
+              className="bg-white rounded-sm border border-[#E5E4DC] p-4 space-y-3 animate-pulse"
+            >
+              <div className="aspect-16/10 bg-[#E5E4DC] rounded-xs w-full" />
+              <div className="h-4 bg-[#E5E4DC] rounded-xs w-3/4" />
+              <div className="h-3 bg-[#E5E4DC] rounded-xs w-1/2" />
+              <div className="h-8 bg-[#E5E4DC] rounded-xs w-full mt-4" />
+            </div>
+          ))}
+        </div>
+      ) : savedEquipment.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {savedEquipment.map((equipment) => (
             <div
@@ -57,7 +97,7 @@ export default function CustomerFavoritesPage() {
                 {/* Image */}
                 <div className="relative aspect-16/10 w-full overflow-hidden bg-[#EBEAE3]">
                   <Image
-                    src={equipment.images[0]}
+                    src={equipment.images[0] || "https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&w=800&q=80"}
                     alt={equipment.title}
                     fill
                     sizes="(max-width: 768px) 100vw, 33vw"
@@ -70,7 +110,7 @@ export default function CustomerFavoritesPage() {
                   </div>
                   <button
                     onClick={() => toggleFavorite(equipment.id)}
-                    className="absolute top-3 right-3 p-1.5 rounded-full bg-white/90 text-red-600 hover:bg-white shadow-xs transition-colors"
+                    className="absolute top-3 right-3 p-1.5 rounded-full bg-white/90 text-red-600 hover:bg-white shadow-xs transition-colors cursor-pointer"
                     title="Remove from favorites"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -117,7 +157,7 @@ export default function CustomerFavoritesPage() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => toggleFavorite(equipment.id)}
-                    className="px-2.5 py-1.5 text-xs text-[#8A948D] hover:text-red-700 font-semibold"
+                    className="px-2.5 py-1.5 text-xs text-[#8A948D] hover:text-red-700 font-semibold cursor-pointer"
                   >
                     Remove
                   </button>

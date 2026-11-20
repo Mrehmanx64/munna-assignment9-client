@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import {
   Truck,
   CheckCircle2,
@@ -15,20 +16,42 @@ import {
   PackageOpen,
   X,
   MapPin,
+  CreditCard,
+  Loader2,
 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { RentalBooking } from "@/types";
+import { bookingApi } from "@/lib/api";
+import { toast } from "sonner";
 
 export default function CustomerRentalsPage() {
-  const { bookings, currentUser } = useApp();
+  const { bookings: contextBookings, currentUser } = useApp();
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedBooking, setSelectedBooking] = useState<RentalBooking | null>(null);
+  const [checkingOutId, setCheckingOutId] = useState<string | null>(null);
 
-  // Filter bookings for current customer (or all if demo customer)
-  const myBookings = bookings.filter((b) => {
-    // Filter by customer if matching, or show all for preview
-    const matchesUser = currentUser ? b.customerId === currentUser.id || b.customerEmail === currentUser.email : true;
+  // Fetch real customer rentals from backend
+  const { data, isLoading } = useQuery({
+    queryKey: ["customer-rentals"],
+    queryFn: () => bookingApi.getMyRentals(),
+    staleTime: 30000,
+  });
+
+  const liveBookings: RentalBooking[] = data?.bookings || [];
+  // Merge live backend bookings with local context bookings if any
+  const mergedMap = new Map<string, RentalBooking>();
+  for (const b of [...liveBookings, ...contextBookings]) {
+    if (b && b.id && !mergedMap.has(b.id)) {
+      mergedMap.set(b.id, b);
+    }
+  }
+
+  const allBookings = Array.from(mergedMap.values());
+  const myBookings = allBookings.filter((b) => {
+    const matchesUser = currentUser
+      ? b.customerId === currentUser.id || b.customerEmail === currentUser.email
+      : true;
     return matchesUser;
   });
 
@@ -49,6 +72,23 @@ export default function CustomerRentalsPage() {
   const totalSpent = myBookings.reduce((acc, b) => acc + b.totalAmount, 0);
   const activeCount = myBookings.filter((b) => b.bookingStatus === "confirmed").length;
   const completedCount = myBookings.filter((b) => b.bookingStatus === "completed").length;
+
+  const handlePayBooking = async (bookingId: string) => {
+    setCheckingOutId(bookingId);
+    try {
+      const res = await bookingApi.checkout(bookingId);
+      if (res?.checkoutUrl) {
+        toast.info("Redirecting to Stripe Checkout...");
+        window.location.href = res.checkoutUrl;
+      } else {
+        toast.error("Checkout session was not created. Please contact support.");
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || err?.message || "Failed to initialize payment.");
+    } finally {
+      setCheckingOutId(null);
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -119,18 +159,17 @@ export default function CustomerRentalsPage() {
 
       {/* Filter Tabs & Search Bar */}
       <div className="bg-white p-4 rounded-sm border border-[#E5E4DC] shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        {/* Status Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0">
           {[
             { id: "all", label: "All Leases" },
-            { id: "confirmed", label: "Confirmed & Active" },
-            { id: "pending", label: "Pending Dispatch" },
+            { id: "confirmed", label: "Confirmed Active" },
+            { id: "pending", label: "Pending Sign-off" },
             { id: "completed", label: "Completed" },
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setStatusFilter(tab.id)}
-              className={`px-3.5 py-1.5 rounded-xs text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+              className={`px-3 py-1.5 rounded-xs text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
                 statusFilter === tab.id
                   ? "bg-[#183C32] text-white shadow-2xs"
                   : "text-[#555E57] hover:bg-[#F7F6F1]"
@@ -141,12 +180,11 @@ export default function CustomerRentalsPage() {
           ))}
         </div>
 
-        {/* Search Field */}
         <div className="relative max-w-xs w-full">
           <Search className="w-3.5 h-3.5 text-[#8A948D] absolute left-3 top-2.5 pointer-events-none" />
           <input
             type="text"
-            placeholder="Search by equipment or order ID..."
+            placeholder="Search leases, machinery, owner..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-8 pr-3 py-1.5 text-xs bg-[#F7F6F1] border border-[#E0DFD6] rounded-xs text-[#202824] focus:outline-hidden focus:border-[#183C32]"
@@ -154,66 +192,76 @@ export default function CustomerRentalsPage() {
         </div>
       </div>
 
-      {/* Rentals Table */}
-      {filteredBookings.length > 0 ? (
+      {/* Bookings Table */}
+      {isLoading ? (
+        <div className="p-8 bg-white border border-[#E5E4DC] rounded-sm text-center">
+          <Loader2 className="w-6 h-6 animate-spin text-[#183C32] mx-auto mb-2" />
+          <p className="text-xs text-[#6A726B]">Loading verified rental requisitions...</p>
+        </div>
+      ) : filteredBookings.length > 0 ? (
         <div className="bg-white rounded-sm border border-[#E5E4DC] shadow-2xs overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="bg-[#EBEAE3] border-b border-[#DCDBCF] text-[#4A544E] uppercase font-bold text-[10px] tracking-wider">
                 <tr>
-                  <th className="py-3 px-4">Equipment Item</th>
-                  <th className="py-3 px-4">Rental Duration</th>
-                  <th className="py-3 px-4">Booking Date</th>
-                  <th className="py-3 px-4">Escrow Amount</th>
+                  <th className="py-3 px-4">Lease Order ID</th>
+                  <th className="py-3 px-4">Equipment Listing</th>
+                  <th className="py-3 px-4">Rental Window</th>
+                  <th className="py-3 px-4">Escrow Total</th>
                   <th className="py-3 px-4">Payment</th>
-                  <th className="py-3 px-4">Booking Status</th>
+                  <th className="py-3 px-4">Status</th>
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#ECEBE3]">
                 {filteredBookings.map((booking) => (
                   <tr key={booking.id} className="hover:bg-[#F7F6F1] transition-colors">
-                    {/* Equipment */}
+                    {/* Order ID */}
+                    <td className="py-3.5 px-4 font-mono font-semibold text-[#183C32]">
+                      <button
+                        onClick={() => setSelectedBooking(booking)}
+                        className="hover:underline flex items-center gap-1.5 text-left"
+                      >
+                        <FileText className="w-3.5 h-3.5 text-[#D99A42]" />
+                        <span>{booking.id}</span>
+                      </button>
+                    </td>
+
+                    {/* Equipment Title & Image */}
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-3">
-                        <div className="relative w-12 h-9 rounded-xs overflow-hidden bg-[#EBEAE3] shrink-0 border border-[#DCDBCF]">
+                        <div className="relative w-10 h-7 rounded-xs overflow-hidden bg-[#EBEAE3] shrink-0 border border-[#DCDBCF]">
                           <Image
                             src={booking.equipmentImage}
                             alt={booking.equipmentTitle}
                             fill
-                            sizes="48px"
+                            sizes="40px"
                             className="object-cover"
                           />
                         </div>
-                        <div className="min-w-0">
-                          <Link
-                            href={`/equipment/${booking.equipmentId}`}
-                            className="font-bold text-[#183C32] hover:underline truncate block max-w-xs"
-                          >
+                        <div>
+                          <span className="font-bold text-[#183C32] block line-clamp-1">
                             {booking.equipmentTitle}
-                          </Link>
-                          <span className="text-[10px] text-[#8A948D]">
-                            ID: {booking.id} • {booking.quantity} Unit{booking.quantity > 1 ? "s" : ""}
+                          </span>
+                          <span className="text-[10px] text-[#6A726B]">
+                            Owner: {booking.ownerName}
                           </span>
                         </div>
                       </div>
                     </td>
 
-                    {/* Rental Period */}
-                    <td className="py-3.5 px-4">
-                      <div className="font-semibold text-[#202824]">
-                        {booking.startDate} → {booking.endDate}
+                    {/* Window & Days */}
+                    <td className="py-3.5 px-4 text-[#555E57]">
+                      <div className="font-medium text-[#202824]">
+                        {booking.startDate} &rarr; {booking.endDate}
                       </div>
-                      <span className="text-[10px] text-[#6A726B] font-mono">
-                        {booking.durationText}
+                      <span className="text-[10px] text-[#8A948D]">
+                        {booking.durationText} • {booking.quantity} Unit(s)
                       </span>
                     </td>
 
-                    {/* Booking Date */}
-                    <td className="py-3.5 px-4 text-[#555E57]">{booking.createdAt}</td>
-
                     {/* Total Amount */}
-                    <td className="py-3.5 px-4 font-heading font-extrabold text-sm text-[#183C32]">
+                    <td className="py-3.5 px-4 font-bold text-[#183C32]">
                       ${booking.totalAmount.toLocaleString()}
                     </td>
 
@@ -223,9 +271,9 @@ export default function CustomerRentalsPage() {
                         className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-xs text-[10px] font-bold uppercase tracking-wider ${
                           booking.paymentStatus === "paid"
                             ? "bg-green-100 text-green-800"
-                            : booking.paymentStatus === "pending"
-                            ? "bg-amber-100 text-amber-800"
-                            : "bg-red-100 text-red-800"
+                            : booking.paymentStatus === "refunded"
+                            ? "bg-gray-100 text-gray-700"
+                            : "bg-amber-100 text-amber-800"
                         }`}
                       >
                         <span className="w-1.5 h-1.5 rounded-full bg-current" />
@@ -250,15 +298,31 @@ export default function CustomerRentalsPage() {
                       </span>
                     </td>
 
-                    {/* Action Button */}
+                    {/* Action Buttons */}
                     <td className="py-3.5 px-4 text-right">
-                      <button
-                        onClick={() => setSelectedBooking(booking)}
-                        className="px-3 py-1 bg-white hover:bg-[#183C32] hover:text-white text-[#183C32] text-xs font-semibold rounded-xs border border-[#DCDBCF] transition-colors shadow-2xs inline-flex items-center gap-1"
-                      >
-                        <FileText className="w-3 h-3" />
-                        <span>Slip</span>
-                      </button>
+                      <div className="flex items-center justify-end gap-1.5">
+                        {booking.paymentStatus === "pending" && (
+                          <button
+                            onClick={() => handlePayBooking(booking.id)}
+                            disabled={checkingOutId === booking.id}
+                            className="px-2.5 py-1 bg-[#D99A42] hover:bg-[#C48733] text-[#11231D] text-xs font-bold rounded-xs shadow-2xs inline-flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                          >
+                            {checkingOutId === booking.id ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <CreditCard className="w-3 h-3" />
+                            )}
+                            <span>Pay</span>
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setSelectedBooking(booking)}
+                          className="px-3 py-1 bg-white hover:bg-[#183C32] hover:text-white text-[#183C32] text-xs font-semibold rounded-xs border border-[#DCDBCF] transition-colors shadow-2xs inline-flex items-center gap-1 cursor-pointer"
+                        >
+                          <FileText className="w-3 h-3" />
+                          <span>Slip</span>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -308,24 +372,28 @@ export default function CustomerRentalsPage() {
               </button>
             </div>
 
-            {/* Equipment Info */}
-            <div className="flex items-center gap-3 p-3 bg-[#F7F6F1] rounded-xs border border-[#E5E4DC]">
-              <div className="relative w-14 h-11 rounded-xs overflow-hidden shrink-0 border border-[#DCDBCF]">
+            {/* Equipment Snapshot */}
+            <div className="flex items-center gap-3 p-3 bg-[#F7F6F1] rounded-xs border border-[#ECEBE3]">
+              <div className="relative w-16 h-12 rounded-xs overflow-hidden shrink-0 border border-[#DCDBCF]">
                 <Image
                   src={selectedBooking.equipmentImage}
                   alt={selectedBooking.equipmentTitle}
                   fill
-                  sizes="56px"
+                  sizes="64px"
                   className="object-cover"
                 />
               </div>
               <div>
-                <p className="font-heading text-xs font-bold text-[#183C32]">{selectedBooking.equipmentTitle}</p>
-                <p className="text-[11px] text-[#6A726B]">{selectedBooking.equipmentCategory}</p>
+                <h4 className="font-heading text-xs font-bold text-[#183C32]">
+                  {selectedBooking.equipmentTitle}
+                </h4>
+                <p className="text-[11px] text-[#6A726B] mt-0.5">
+                  Category: {selectedBooking.equipmentCategory}
+                </p>
               </div>
             </div>
 
-            {/* Details Breakdown */}
+            {/* Key Requisition Specs */}
             <div className="grid grid-cols-2 gap-3 text-xs">
               <div className="p-2.5 bg-[#F7F6F1] rounded-xs">
                 <span className="text-[10px] font-bold uppercase text-[#6A726B] block">Rental Window</span>
@@ -364,7 +432,21 @@ export default function CustomerRentalsPage() {
               </div>
             )}
 
-            <div className="pt-2 flex justify-end">
+            <div className="pt-2 flex items-center justify-between">
+              {selectedBooking.paymentStatus === "pending" ? (
+                <button
+                  onClick={() => handlePayBooking(selectedBooking.id)}
+                  disabled={checkingOutId === selectedBooking.id}
+                  className="px-4 py-2 bg-[#D99A42] hover:bg-[#C48733] text-[#11231D] text-xs font-bold rounded-xs shadow-2xs inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  {checkingOutId === selectedBooking.id ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <CreditCard className="w-3.5 h-3.5" />
+                  )}
+                  <span>Pay Now via Stripe</span>
+                </button>
+              ) : <div />}
               <button
                 onClick={() => setSelectedBooking(null)}
                 className="px-4 py-2 bg-[#183C32] text-white text-xs font-semibold rounded-xs"
