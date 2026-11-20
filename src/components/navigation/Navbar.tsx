@@ -1,0 +1,366 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import Image from "next/image";
+import {
+  Menu,
+  X,
+  Search,
+  Bookmark,
+  ChevronDown,
+  LayoutDashboard,
+  ShieldCheck,
+  User as UserIcon,
+  LogOut,
+  PlusCircle,
+  Truck,
+  Wrench,
+} from "lucide-react";
+import { useApp } from "@/context/AppContext";
+import { UserRole } from "@/types";
+
+export function Navbar() {
+  const pathname = usePathname();
+  const { currentUser, currentRole, setCurrentRole, favorites } = useApp();
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 15);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const navLinks = [
+    { label: "Home", href: "/" },
+    { label: "Explore Equipment", href: "/equipment" },
+    { label: "How It Works", href: "/#how-it-works" },
+    { label: "About", href: "/#why-us" },
+    { label: "Contact", href: "/#contact" },
+  ];
+
+  const getDashboardHref = () => {
+    if (currentRole === "owner") return "/dashboard/owner";
+    if (currentRole === "admin") return "/dashboard/admin";
+    return "/dashboard/customer";
+  };
+
+  return (
+    <>
+      <header
+        className={`sticky top-0 z-50 transition-all duration-200 ${
+          isScrolled
+            ? "bg-[#F7F6F1]/95 backdrop-blur-md shadow-xs border-b border-[#E5E4DC]"
+            : "bg-[#F7F6F1] border-b border-[#ECEBE3]"
+        }`}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-20">
+            {/* Brand Logo */}
+            <div className="flex items-center gap-8">
+              <Link href="/" className="group flex items-baseline gap-1.5 focus:outline-hidden">
+                <span className="font-heading font-extrabold text-2xl sm:text-3xl tracking-tight text-[#183C32]">
+                  RENTORA
+                </span>
+                <span className="w-2 h-2 rounded-full bg-[#D99A42] transition-transform duration-300 group-hover:scale-125 inline-block" />
+                <span className="hidden xl:inline-block ml-2 text-[10px] tracking-widest uppercase font-semibold text-[#6A726B] border-l border-[#DCDBCF] pl-2.5">
+                  Heavy & Industrial
+                </span>
+              </Link>
+
+              {/* Desktop Nav Links */}
+              <nav className="hidden lg:flex items-center gap-1">
+                {navLinks.map((link) => {
+                  const isActive =
+                    link.href === "/"
+                      ? pathname === "/"
+                      : pathname.startsWith(link.href) && !link.href.includes("#");
+                  return (
+                    <Link
+                      key={link.label}
+                      href={link.href}
+                      className={`px-3.5 py-2 text-sm font-medium transition-colors rounded-sm ${
+                        isActive
+                          ? "text-[#183C32] font-semibold bg-[#EBEAE3]/60"
+                          : "text-[#4A524D] hover:text-[#183C32] hover:bg-[#EBEAE3]/40"
+                      }`}
+                    >
+                      {link.label}
+                    </Link>
+                  );
+                })}
+              </nav>
+            </div>
+
+            {/* Right Side Actions */}
+            <div className="flex items-center gap-3">
+              {/* Demo Persona Switcher Pill */}
+              <div className="hidden md:flex items-center text-xs bg-[#EBEAE3] border border-[#DCDBCF] rounded-full p-0.5">
+                <span className="px-2.5 py-1 text-[#6A726B] font-medium text-[11px] uppercase tracking-wider">
+                  Role:
+                </span>
+                {(["customer", "owner", "admin", "guest"] as const).map((r) => (
+                  <button
+                    key={r}
+                    onClick={() => setCurrentRole(r as UserRole | "guest")}
+                    className={`px-2.5 py-1 rounded-full font-medium transition-all capitalize ${
+                      currentRole === r
+                        ? "bg-[#183C32] text-[#F7F6F1] shadow-2xs"
+                        : "text-[#555E57] hover:text-[#183C32]"
+                    }`}
+                  >
+                    {r}
+                  </button>
+                ))}
+              </div>
+
+              {/* Search Shortcut */}
+              <Link
+                href="/equipment"
+                className="hidden sm:flex items-center justify-center w-10 h-10 rounded-full text-[#4A524D] hover:text-[#183C32] hover:bg-[#EBEAE3] transition-colors"
+                title="Search Equipment"
+              >
+                <Search className="w-4 h-4" />
+              </Link>
+
+              {/* Favorites Shortcut (when logged in or guest) */}
+              <Link
+                href={currentRole === "guest" ? "/login" : "/dashboard/customer/favorites"}
+                className="relative hidden sm:flex items-center justify-center w-10 h-10 rounded-full text-[#4A524D] hover:text-[#183C32] hover:bg-[#EBEAE3] transition-colors"
+                title="Saved Equipment"
+              >
+                <Bookmark className="w-4 h-4" />
+                {favorites.length > 0 && (
+                  <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#D99A42]" />
+                )}
+              </Link>
+
+              {/* User Dropdown or Guest Auth Buttons */}
+              {currentUser ? (
+                <div className="relative">
+                  <button
+                    onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                    className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-full border border-[#DCDBCF] bg-white hover:border-[#183C32] transition-colors focus:outline-hidden"
+                  >
+                    <div className="relative w-7 h-7 rounded-full overflow-hidden bg-[#183C32]">
+                      <Image
+                        src={currentUser.avatarUrl}
+                        alt={currentUser.name}
+                        fill
+                        sizes="28px"
+                        className="object-cover"
+                      />
+                    </div>
+                    <span className="text-xs font-semibold text-[#183C32] hidden sm:inline max-w-[100px] truncate">
+                      {currentUser.name.split(" ")[0]}
+                    </span>
+                    <ChevronDown className="w-3.5 h-3.5 text-[#6A726B]" />
+                  </button>
+
+                  {/* Dropdown Menu */}
+                  {userDropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-64 bg-white rounded-md shadow-lg border border-[#E5E4DC] py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                      <div className="px-4 py-2 border-b border-[#ECEBE3]">
+                        <p className="text-sm font-semibold text-[#183C32]">{currentUser.name}</p>
+                        <p className="text-xs text-[#6A726B] truncate">{currentUser.email}</p>
+                        <div className="mt-1.5 flex items-center gap-1.5">
+                          <span className="px-2 py-0.5 text-[10px] uppercase font-bold tracking-wider rounded-sm bg-[#183C32] text-[#F7F6F1]">
+                            {currentUser.role}
+                          </span>
+                          <span className="text-[11px] text-[#6A726B]">Verified Account</span>
+                        </div>
+                      </div>
+
+                      <div className="py-1">
+                        <Link
+                          href={getDashboardHref()}
+                          className="flex items-center gap-2.5 px-4 py-2 text-sm text-[#202824] hover:bg-[#F7F6F1] font-medium"
+                          onClick={() => setUserDropdownOpen(false)}
+                        >
+                          <LayoutDashboard className="w-4 h-4 text-[#D99A42]" />
+                          <span>Role Dashboard</span>
+                        </Link>
+
+                        {currentRole === "customer" && (
+                          <>
+                            <Link
+                              href="/dashboard/customer"
+                              className="flex items-center gap-2.5 px-4 py-2 text-sm text-[#4A524D] hover:bg-[#F7F6F1]"
+                              onClick={() => setUserDropdownOpen(false)}
+                            >
+                              <Truck className="w-4 h-4 text-[#6A726B]" />
+                              <span>My Rentals</span>
+                            </Link>
+                            <Link
+                              href="/dashboard/customer/favorites"
+                              className="flex items-center gap-2.5 px-4 py-2 text-sm text-[#4A524D] hover:bg-[#F7F6F1]"
+                              onClick={() => setUserDropdownOpen(false)}
+                            >
+                              <Bookmark className="w-4 h-4 text-[#6A726B]" />
+                              <span>Saved Gear ({favorites.length})</span>
+                            </Link>
+                          </>
+                        )}
+
+                        {currentRole === "owner" && (
+                          <>
+                            <Link
+                              href="/dashboard/owner/add"
+                              className="flex items-center gap-2.5 px-4 py-2 text-sm text-[#4A524D] hover:bg-[#F7F6F1]"
+                              onClick={() => setUserDropdownOpen(false)}
+                            >
+                              <PlusCircle className="w-4 h-4 text-[#6A726B]" />
+                              <span>List New Equipment</span>
+                            </Link>
+                            <Link
+                              href="/dashboard/owner/equipment"
+                              className="flex items-center gap-2.5 px-4 py-2 text-sm text-[#4A524D] hover:bg-[#F7F6F1]"
+                              onClick={() => setUserDropdownOpen(false)}
+                            >
+                              <Wrench className="w-4 h-4 text-[#6A726B]" />
+                              <span>Manage Listings</span>
+                            </Link>
+                          </>
+                        )}
+
+                        {currentRole === "admin" && (
+                          <Link
+                            href="/dashboard/admin/equipment"
+                            className="flex items-center gap-2.5 px-4 py-2 text-sm text-[#4A524D] hover:bg-[#F7F6F1]"
+                            onClick={() => setUserDropdownOpen(false)}
+                          >
+                            <ShieldCheck className="w-4 h-4 text-[#6A726B]" />
+                            <span>Approvals & Equipment</span>
+                          </Link>
+                        )}
+
+                        <Link
+                          href={`/dashboard/${currentRole}/profile`}
+                          className="flex items-center gap-2.5 px-4 py-2 text-sm text-[#4A524D] hover:bg-[#F7F6F1]"
+                          onClick={() => setUserDropdownOpen(false)}
+                        >
+                          <UserIcon className="w-4 h-4 text-[#6A726B]" />
+                          <span>Profile Settings</span>
+                        </Link>
+                      </div>
+
+                      <div className="border-t border-[#ECEBE3] pt-1">
+                        <button
+                          onClick={() => {
+                            setCurrentRole("guest");
+                            setUserDropdownOpen(false);
+                          }}
+                          className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-[#B93838] hover:bg-red-50 text-left font-medium"
+                        >
+                          <LogOut className="w-4 h-4 text-[#B93838]" />
+                          <span>Sign Out</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Link
+                    href="/login"
+                    className="px-3.5 py-2 text-sm font-medium text-[#183C32] hover:bg-[#EBEAE3] rounded-sm transition-colors"
+                  >
+                    Login
+                  </Link>
+                  <Link
+                    href="/register"
+                    className="px-4 py-2 text-sm font-semibold bg-[#183C32] text-[#F7F6F1] hover:bg-[#245344] rounded-sm transition-colors shadow-2xs"
+                  >
+                    Register
+                  </Link>
+                </div>
+              )}
+
+              {/* Mobile Menu Toggle Button */}
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="lg:hidden p-2 text-[#202824] hover:bg-[#EBEAE3] rounded-sm transition-colors focus:outline-hidden"
+                aria-label="Toggle Navigation Menu"
+              >
+                {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Navigation Drawer */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden bg-[#F7F6F1] border-b border-[#E5E4DC] px-4 pt-3 pb-6 animate-in slide-in-from-top-3 duration-200">
+            <nav className="flex flex-col space-y-1">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.label}
+                  href={link.href}
+                  className="px-3 py-2.5 text-base font-medium text-[#202824] hover:bg-[#EBEAE3] rounded-sm"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  {link.label}
+                </Link>
+              ))}
+
+              <div className="pt-3 border-t border-[#ECEBE3] my-2">
+                <p className="px-3 text-xs font-bold uppercase tracking-wider text-[#6A726B] mb-2">
+                  Active Persona Switcher
+                </p>
+                <div className="grid grid-cols-4 gap-1.5 px-2">
+                  {(["customer", "owner", "admin", "guest"] as const).map((r) => (
+                    <button
+                      key={r}
+                      onClick={() => setCurrentRole(r as UserRole | "guest")}
+                      className={`py-1.5 text-xs rounded-sm font-medium capitalize text-center border ${
+                        currentRole === r
+                          ? "bg-[#183C32] text-white border-[#183C32]"
+                          : "bg-white text-[#4A524D] border-[#DCDBCF]"
+                      }`}
+                    >
+                      {r}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {currentUser ? (
+                <div className="pt-2">
+                  <Link
+                    href={getDashboardHref()}
+                    className="block w-full py-2.5 text-center font-semibold text-white bg-[#183C32] rounded-sm"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Go to {currentRole.toUpperCase()} Dashboard
+                  </Link>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2 pt-3">
+                  <Link
+                    href="/login"
+                    className="block py-2 text-center font-medium border border-[#DCDBCF] bg-white rounded-sm text-[#183C32]"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Login
+                  </Link>
+                  <Link
+                    href="/register"
+                    className="block py-2 text-center font-semibold bg-[#183C32] text-[#F7F6F1] rounded-sm"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Register
+                  </Link>
+                </div>
+              )}
+            </nav>
+          </div>
+        )}
+      </header>
+    </>
+  );
+}
