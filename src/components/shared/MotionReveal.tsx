@@ -9,6 +9,7 @@ interface MotionRevealProps {
   duration?: number;
   direction?: "up" | "down" | "left" | "right" | "none";
   className?: string;
+  animateOnMount?: boolean;
 }
 
 export function MotionReveal({
@@ -17,6 +18,7 @@ export function MotionReveal({
   duration = 0.5,
   direction = "up",
   className = "",
+  animateOnMount = false,
 }: MotionRevealProps) {
   const shouldReduceMotion = useReducedMotion();
 
@@ -24,7 +26,7 @@ export function MotionReveal({
     return <div className={className}>{children}</div>;
   }
 
-  const offset = 24;
+  const offset = 20;
   const initialVariants = {
     up: { opacity: 0, y: offset },
     down: { opacity: 0, y: -offset },
@@ -33,11 +35,28 @@ export function MotionReveal({
     none: { opacity: 0 },
   };
 
+  if (animateOnMount) {
+    return (
+      <motion.div
+        initial={initialVariants[direction]}
+        animate={{ opacity: 1, x: 0, y: 0 }}
+        transition={{
+          duration,
+          delay,
+          ease: [0.21, 0.47, 0.32, 0.98],
+        }}
+        className={className}
+      >
+        {children}
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div
       initial={initialVariants[direction]}
       whileInView={{ opacity: 1, x: 0, y: 0 }}
-      viewport={{ once: true, margin: "-40px" }}
+      viewport={{ once: true, margin: "0px", amount: "some" }}
       transition={{
         duration,
         delay,
@@ -49,3 +68,4 @@ export function MotionReveal({
     </motion.div>
   );
 }
+
