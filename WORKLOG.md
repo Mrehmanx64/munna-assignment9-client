@@ -32,6 +32,8 @@ This document tracks all completed engineering milestones, git commit history, a
 | 22 | `7c4ae72` | `fix: improve responsive layouts and polish interactions` | Refined mobile drawer touch targets, added branded 404 field error recovery page, improved accessibility focus states, and ensured seamless 320px-1440px viewport elasticity. |
 | 23 | `da70ff6` | `docs: finalize platform documentation and architecture worklog` | Finalized comprehensive README and WORKLOG documentation, documenting architecture, design tokens, role switcher, and quality verification. |
 | 24 | `142082d` | `fix: resolve hero section initial visibility and enhance asymmetric editorial layout` | Resolved initial opacity/viewport reveal bug on above-the-fold content, added animateOnMount capability to MotionReveal, set unoptimized and blueprint fallback textures for imagery, added quick fleet search pills, and expanded asymmetric industrial composition. |
+| 25 | `0f71500` | `docs: update worklog with hero section visibility resolution` | Recorded milestone 24 commit details and verification records. |
+| 26 | `5ad0e2a` | `fix: integrate live equipment and category imagery across marketplace` | Integrated live photography links across Hero, Categories, Equipment Catalog, and Owner forms; configured unoptimized loading and remotePatterns in next.config.ts to support multi-domain media hosting. |
 
 ---
 
