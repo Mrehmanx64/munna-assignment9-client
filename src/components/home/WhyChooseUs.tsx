@@ -113,7 +113,7 @@ export function WhyChooseUs() {
             <div className="lg:col-span-6 relative">
               <div className="relative h-[480px] sm:h-[520px] rounded-sm overflow-hidden border border-[#DCDBCF] shadow-xl bg-[#EAE8DE]">
                 <Image
-                  src="https://images.unsplash.com/photo-1541888946425-d0fbb186156f?auto=format&fit=crop&w=1200&q=80"
+                  src="https://images.unsplash.com/photo-1779285756094-85ddc78ead65?q=80&w=1356&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"
                   alt="Professional construction engineers inspecting heavy telescopic machinery"
                   fill
                   sizes="(max-width: 1024px) 100vw, 50vw"

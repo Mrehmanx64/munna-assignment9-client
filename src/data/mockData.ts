@@ -77,7 +77,7 @@ export const MOCK_CATEGORIES: CategorySummary[] = [
     description:
       "Hydraulic excavators, skid steers, scissor lifts, compactor rollers, and earthmoving machinery.",
     image:
-      "https://images.unsplash.com/photo-1581094288338-2314dddb7ece?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1779285756094-85ddc78ead65?q=80&w=1356&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
     startingPrice: 320,
   },
   {
@@ -87,7 +87,7 @@ export const MOCK_CATEGORIES: CategorySummary[] = [
     description:
       "Cinema cameras, anamorphic lenses, modular rigs, LED lighting panels, and audio booms.",
     image:
-      "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1497015289639-54688650d173?q=80&w=1332&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
     startingPrice: 140,
   },
   {
@@ -97,7 +97,7 @@ export const MOCK_CATEGORIES: CategorySummary[] = [
     description:
       "Flatbed haulers, enclosed trailers, utility pickups, and heavy transit transport vehicles.",
     image:
-      "https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1626121300305-def4dc305387?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
     startingPrice: 210,
   },
   {
@@ -107,7 +107,7 @@ export const MOCK_CATEGORIES: CategorySummary[] = [
     description:
       "Utility tractors, seeders, rotary tillers, balers, and precision spray implements.",
     image:
-      "https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1571509107684-7e3034a90012?q=80&w=686&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
     startingPrice: 280,
   },
   {
@@ -117,7 +117,7 @@ export const MOCK_CATEGORIES: CategorySummary[] = [
     description:
       "High-output diesel generators, LiDAR scanners, industrial thermal sensors, and site drones.",
     image:
-      "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1780445392484-38a4852a1fd8?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
     startingPrice: 95,
   },
   {
@@ -127,7 +127,7 @@ export const MOCK_CATEGORIES: CategorySummary[] = [
     description:
       "Concert line arrays, truss rigging, climate control pods, staging risers, and power distros.",
     image:
-      "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=800&q=80",
+      "https://in.yamaha.com/en/files/vertical-market-bannertouring-live-production-2000x600_tcm142-2158132.jpg?impolicy=resize&imwid=2000&imhei=600",
     startingPrice: 175,
   },
 ];
@@ -149,9 +149,8 @@ export const MOCK_EQUIPMENT: Equipment[] = [
     model: "320 GC (22-Ton)",
     location: "Oakland Yard, CA",
     images: [
-      "https://images.unsplash.com/photo-1581094288338-2314dddb7ece?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1578328819058-b69f3a3b0f6b?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1541888946425-d0fbb186156f?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1768085091650-e8e89ef57b76?q=80&w=1171&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+      "https://images.unsplash.com/photo-1779285756094-85ddc78ead65?q=80&w=1356&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
     ],
     featured: true,
     rating: 4.95,
@@ -195,9 +194,8 @@ export const MOCK_EQUIPMENT: Equipment[] = [
     model: "ALEXA Mini LF",
     location: "Burbank Studios, CA",
     images: [
-      "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=1200&q=80",
+      "https://www.arri.com/resource/image/303404/landscape_ratio1x0_69/725/505/f9458989a1ec320a2e9180524e804768/FCCE5634FE8E1CD239D8BE7EDE944293/221222-alexa-mini-lf-headerloop-260-uhd-h264-rec709-24p-silent.png",
+      "https://images.unsplash.com/photo-1607276159787-9ef4db5c0d0b?q=80&w=765&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
     ],
     featured: true,
     rating: 5.0,
@@ -241,9 +239,8 @@ export const MOCK_EQUIPMENT: Equipment[] = [
     model: "6155M PowerTech",
     location: "Stockton Agricultural Depot, CA",
     images: [
-      "https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1589923188900-85dae523342b?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1530267981375-f0de937f5f13?auto=format&fit=crop&w=1200&q=80",
+      "https://s44782.pcdn.co/wp-content/uploads/2026/02/8R_540_Emotional-1x-768x512.jpg.webp",
+      "https://images.unsplash.com/photo-1571509107684-7e3034a90012?q=80&w=686&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
     ],
     featured: true,
     rating: 4.88,
@@ -286,9 +283,8 @@ export const MOCK_EQUIPMENT: Equipment[] = [
     model: "S-85 XC (Xtra Capacity)",
     location: "San Jose Equipment Depot, CA",
     images: [
-      "https://images.unsplash.com/photo-1541888946425-d0fbb186156f?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1581094288338-2314dddb7ece?auto=format&fit=crop&w=1200&q=80",
+      "https://image.made-in-china.com/202f0j00tKZClpIJhRkQ/22m-Diesel-Electric-Boom-Lift-Cherry-Picker-Articulated-Aerial-Work-Platform.webp",
+      "https://images.unsplash.com/photo-1779285756094-85ddc78ead65?q=80&w=1356&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
     ],
     featured: true,
     rating: 4.91,
@@ -331,8 +327,8 @@ export const MOCK_EQUIPMENT: Equipment[] = [
     model: "DCA150SSJU4F",
     location: "Richmond Logistics Hub, CA",
     images: [
-      "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1621905252507-b35492cc74b4?auto=format&fit=crop&w=1200&q=80",
+      "https://www.taylorpowergenerators.com/assets/img/products/categories/trailer-mounted-generators/trailer-mounted-generators-main.webp",
+      "https://images.unsplash.com/photo-1780445392484-38a4852a1fd8?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
     ],
     featured: true,
     rating: 4.97,
@@ -375,8 +371,8 @@ export const MOCK_EQUIPMENT: Equipment[] = [
     model: "Business Class M2 106",
     location: "Hayward Transport Center, CA",
     images: [
-      "https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=1200&q=80",
+      "https://www.cantorinjurylaw.com/wp-content/uploads/2024/12/dc0a9a74-469b-47cd-ae29-0f2a52627f06.jpg.webp",
+      "https://images.unsplash.com/photo-1626121300305-def4dc305387?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
     ],
     featured: true,
     rating: 4.84,
@@ -463,8 +459,8 @@ export const MOCK_EQUIPMENT: Equipment[] = [
     model: "V8 / V12 + V-SUB Package",
     location: "Oakland Audio Depot, CA",
     images: [
-      "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80",
+      "https://www.l-acoustics.com/wp-content/uploads/2024/10/la-pearl-jam-8-300x225.jpg",
+      "https://in.yamaha.com/en/files/vertical-market-bannertouring-live-production-2000x600_tcm142-2158132.jpg?impolicy=resize&imwid=2000&imhei=600",
     ],
     featured: false,
     rating: 5.0,
@@ -548,8 +544,8 @@ export const MOCK_EQUIPMENT: Equipment[] = [
     model: "T770 High Flow",
     location: "Sacramento Central Depot, CA",
     images: [
-      "https://images.unsplash.com/photo-1578328819058-b69f3a3b0f6b?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1581094288338-2314dddb7ece?auto=format&fit=crop&w=1200&q=80",
+      "https://cdn.prod.website-files.com/6103ec620a0d5041b36face6/6669f191a392632552459a9b_skid-steer.webp",
+      "https://images.unsplash.com/photo-1779285756094-85ddc78ead65?q=80&w=1356&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
     ],
     featured: false,
     rating: 4.93,
@@ -590,8 +586,8 @@ export const MOCK_EQUIPMENT: Equipment[] = [
     model: "Matrice 350 RTK + H20T",
     location: "Oakland Yard, CA",
     images: [
+      "https://cdn.mos.cms.futurecdn.net/3ExwAytUhjDbPCBjg52rvW-650-80.jpg.webp",
       "https://images.unsplash.com/photo-1508614589041-895b88991e3e?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=1200&q=80",
     ],
     featured: false,
     rating: 4.9,
@@ -632,8 +628,8 @@ export const MOCK_EQUIPMENT: Equipment[] = [
     model: "Classic 30 Production Spec",
     location: "Burbank Studios, CA",
     images: [
-      "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80",
+      "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6b/Tire_Transport_Truck_%2846038169192%29.jpg/250px-Tire_Transport_Truck_%2846038169192%29.jpg",
+      "https://images.unsplash.com/photo-1626121300305-def4dc305387?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
     ],
     featured: false,
     rating: 4.95,

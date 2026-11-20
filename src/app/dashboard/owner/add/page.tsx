@@ -31,7 +31,7 @@ export default function AddEquipmentPage() {
   const [quantity, setQuantity] = useState<number>(2);
   const [condition, setCondition] = useState<EquipmentCondition>("Excellent");
   const [imageUrl, setImageUrl] = useState(
-    "https://images.unsplash.com/photo-1581094288338-2314dddb7ece?auto=format&fit=crop&w=1200&q=80"
+    "https://images.unsplash.com/photo-1768085091650-e8e89ef57b76?q=80&w=1171&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"
   );
   const [termsText, setTermsText] = useState(
     "Commercial contractor license required.\nDaily maintenance log must be signed.\nFuel replacement policy applies."

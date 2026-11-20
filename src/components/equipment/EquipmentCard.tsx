@@ -28,7 +28,7 @@ export function EquipmentCard({ equipment, priority = false }: EquipmentCardProp
       {/* Image Area with Aspect Ratio */}
       <div className="relative aspect-16/10 w-full overflow-hidden bg-[#ECEAE2]">
         <Image
-          src={equipment.images[0] || "https://images.unsplash.com/photo-1581094288338-2314dddb7ece?auto=format&fit=crop&w=800&q=80"}
+          src={equipment.images[0] || "https://images.unsplash.com/photo-1768085091650-e8e89ef57b76?q=80&w=1171&auto=format&fit=crop"}
           alt={equipment.title}
           fill
           priority={priority}

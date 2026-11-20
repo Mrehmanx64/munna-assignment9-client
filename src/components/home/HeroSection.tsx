@@ -254,7 +254,7 @@ export function HeroSection() {
                   <div className="absolute inset-0 bg-[radial-gradient(#394B43_1px,transparent_1px)] [background-size:16px_16px] opacity-30" />
 
                   <Image
-                    src="https://images.unsplash.com/photo-1581094288338-2314dddb7ece?auto=format&fit=crop&w=1200&q=85"
+                    src="https://images.unsplash.com/photo-1768085091650-e8e89ef57b76?q=80&w=1171&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"
                     alt="CAT 320 GC Heavy Hydraulic Excavator on commercial jobsite"
                     fill
                     priority
@@ -306,7 +306,7 @@ export function HeroSection() {
                   <div className="flex items-center gap-3">
                     <div className="relative w-14 h-14 rounded-xs overflow-hidden shrink-0 border border-[#E7E7DF] bg-[#202824]">
                       <Image
-                        src="https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=400&q=80"
+                        src="https://images.unsplash.com/photo-1607276159787-9ef4db5c0d0b?q=80&w=765&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"
                         alt="Cinema Equipment"
                         fill
                         unoptimized
