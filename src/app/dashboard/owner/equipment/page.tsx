@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import {
   Wrench,
   PlusCircle,
@@ -10,14 +11,33 @@ import {
   Trash2,
   PackageOpen,
   Eye,
+  Loader2,
 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
-import { EquipmentStatus } from "@/types";
+import { Equipment, EquipmentStatus } from "@/types";
+import { ownerApi } from "@/lib/api";
 
 export default function MyEquipmentListPage() {
-  const { equipmentList, deleteEquipment, updateEquipmentStatus } = useApp();
+  const { equipmentList: contextEquipment, deleteEquipment, updateEquipmentStatus } = useApp();
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
+
+  // Query live owner equipment
+  const { data, isLoading } = useQuery({
+    queryKey: ["owner-equipment"],
+    queryFn: () => ownerApi.getEquipment(),
+    staleTime: 30000,
+  });
+
+  const liveList: Equipment[] = data?.equipment || [];
+  const mergedMap = new Map<string, Equipment>();
+  for (const eq of [...liveList, ...contextEquipment]) {
+    if (eq && eq.id && !mergedMap.has(eq.id)) {
+      mergedMap.set(eq.id, eq);
+    }
+  }
+
+  const equipmentList = Array.from(mergedMap.values());
 
   const filtered = equipmentList.filter((eq) => {
     if (categoryFilter !== "All" && eq.category !== categoryFilter) return false;
@@ -97,7 +117,12 @@ export default function MyEquipmentListPage() {
       </div>
 
       {/* Fleet Table */}
-      {filtered.length > 0 ? (
+      {isLoading ? (
+        <div className="p-8 bg-white border border-[#E5E4DC] rounded-sm text-center">
+          <Loader2 className="w-6 h-6 animate-spin text-[#183C32] mx-auto mb-2" />
+          <p className="text-xs text-[#6A726B]">Loading owner machinery fleet...</p>
+        </div>
+      ) : filtered.length > 0 ? (
         <div className="bg-white rounded-sm border border-[#E5E4DC] shadow-2xs overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
@@ -119,7 +144,7 @@ export default function MyEquipmentListPage() {
                       <div className="flex items-center gap-3">
                         <div className="relative w-12 h-9 rounded-xs overflow-hidden bg-[#EBEAE3] shrink-0 border border-[#DCDBCF]">
                           <Image
-                            src={eq.images[0]}
+                            src={eq.images[0] || "https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&w=800&q=80"}
                             alt={eq.title}
                             fill
                             sizes="48px"
@@ -196,7 +221,7 @@ export default function MyEquipmentListPage() {
                               deleteEquipment(eq.id);
                             }
                           }}
-                          className="p-1.5 rounded-xs text-red-600 hover:bg-red-50 transition-colors"
+                          className="p-1.5 rounded-xs text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
                           title="Delete listing"
                         >
                           <Trash2 className="w-3.5 h-3.5" />

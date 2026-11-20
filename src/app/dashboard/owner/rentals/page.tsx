@@ -1,20 +1,41 @@
 "use client";
 
 import React, { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   FileSpreadsheet,
   Search,
   Check,
+  Loader2,
+  PackageOpen,
 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
-import { BookingStatus, PaymentStatus } from "@/types";
+import { BookingStatus, PaymentStatus, RentalBooking } from "@/types";
+import { ownerApi } from "@/lib/api";
 
 export default function OwnerRentalsPage() {
-  const { bookings, updateBookingStatus, updatePaymentStatus } = useApp();
+  const { bookings: contextBookings, updateBookingStatus, updatePaymentStatus } = useApp();
   const [filter, setFilter] = useState<string>("all");
   const [search, setSearch] = useState<string>("");
 
-  const filtered = bookings.filter((b) => {
+  // Query live owner bookings
+  const { data, isLoading } = useQuery({
+    queryKey: ["owner-bookings"],
+    queryFn: () => ownerApi.getBookings(),
+    staleTime: 30000,
+  });
+
+  const liveBookings: RentalBooking[] = data?.bookings || [];
+  const mergedMap = new Map<string, RentalBooking>();
+  for (const b of [...liveBookings, ...contextBookings]) {
+    if (b && b.id && !mergedMap.has(b.id)) {
+      mergedMap.set(b.id, b);
+    }
+  }
+
+  const allBookings = Array.from(mergedMap.values());
+
+  const filtered = allBookings.filter((b) => {
     if (filter !== "all" && b.bookingStatus !== filter) return false;
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -81,98 +102,117 @@ export default function OwnerRentalsPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-sm border border-[#E5E4DC] shadow-2xs overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-[#EBEAE3] border-b border-[#DCDBCF] text-[#4A544E] uppercase font-bold text-[10px] tracking-wider">
-              <tr>
-                <th className="py-3 px-4">Order ID &amp; Contractor</th>
-                <th className="py-3 px-4">Equipment Listing</th>
-                <th className="py-3 px-4">Lease Window</th>
-                <th className="py-3 px-4">Escrow Amount</th>
-                <th className="py-3 px-4">Payment</th>
-                <th className="py-3 px-4">Lease Status</th>
-                <th className="py-3 px-4 text-right">Update Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#ECEBE3]">
-              {filtered.map((b) => (
-                <tr key={b.id} className="hover:bg-[#F7F6F1] transition-colors">
-                  <td className="py-3.5 px-4">
-                    <span className="font-mono text-[10px] text-[#8A948D] block">{b.id}</span>
-                    <p className="font-bold text-[#183C32]">{b.customerName}</p>
-                    <p className="text-[10px] text-[#6A726B]">{b.customerEmail}</p>
-                  </td>
-
-                  <td className="py-3.5 px-4">
-                    <p className="font-semibold text-[#202824]">{b.equipmentTitle}</p>
-                    <span className="text-[10px] text-[#6A726B]">
-                      Qty: {b.quantity} • {b.equipmentCategory}
-                    </span>
-                  </td>
-
-                  <td className="py-3.5 px-4">
-                    <span className="font-semibold text-[#202824] block">
-                      {b.startDate} to {b.endDate}
-                    </span>
-                    <span className="text-[10px] text-[#8A948D] font-mono">{b.durationText}</span>
-                  </td>
-
-                  <td className="py-3.5 px-4 font-heading font-extrabold text-sm text-[#183C32]">
-                    ${b.totalAmount.toLocaleString()}
-                  </td>
-
-                  <td className="py-3.5 px-4">
-                    <select
-                      value={b.paymentStatus}
-                      onChange={(e) =>
-                        updatePaymentStatus(b.id, e.target.value as PaymentStatus)
-                      }
-                      className="text-[11px] font-bold px-2 py-1 rounded-xs bg-[#F7F6F1] border border-[#DCDBCF] text-[#183C32] cursor-pointer"
-                    >
-                      <option value="paid">Paid (Escrow)</option>
-                      <option value="pending">Pending</option>
-                      <option value="refunded">Refunded</option>
-                    </select>
-                  </td>
-
-                  <td className="py-3.5 px-4">
-                    <select
-                      value={b.bookingStatus}
-                      onChange={(e) =>
-                        updateBookingStatus(b.id, e.target.value as BookingStatus)
-                      }
-                      className="text-[11px] font-bold px-2 py-1 rounded-xs bg-[#183C32] text-white cursor-pointer"
-                    >
-                      <option value="confirmed">Confirmed Active</option>
-                      <option value="pending">Pending Dispatch</option>
-                      <option value="completed">Completed Pass</option>
-                      <option value="cancelled">Cancelled</option>
-                    </select>
-                  </td>
-
-                  <td className="py-3.5 px-4 text-right">
-                    {b.bookingStatus !== "completed" ? (
-                      <button
-                        onClick={() => updateBookingStatus(b.id, "completed")}
-                        className="px-2.5 py-1 bg-[#2E6B4F] hover:bg-[#245344] text-white text-[10px] font-bold uppercase rounded-xs transition-colors inline-flex items-center gap-1 shadow-2xs"
-                        title="Mark lease returned & inspect pass"
-                      >
-                        <Check className="w-3 h-3" />
-                        <span>Sign Off</span>
-                      </button>
-                    ) : (
-                      <span className="text-[10px] text-[#2E6B4F] font-bold">
-                        Audit Passed
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {isLoading ? (
+        <div className="p-8 bg-white border border-[#E5E4DC] rounded-sm text-center">
+          <Loader2 className="w-6 h-6 animate-spin text-[#183C32] mx-auto mb-2" />
+          <p className="text-xs text-[#6A726B]">Loading incoming rental dispatches...</p>
         </div>
-      </div>
+      ) : filtered.length > 0 ? (
+        <div className="bg-white rounded-sm border border-[#E5E4DC] shadow-2xs overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-[#EBEAE3] border-b border-[#DCDBCF] text-[#4A544E] uppercase font-bold text-[10px] tracking-wider">
+                <tr>
+                  <th className="py-3 px-4">Order ID &amp; Contractor</th>
+                  <th className="py-3 px-4">Equipment Listing</th>
+                  <th className="py-3 px-4">Lease Window</th>
+                  <th className="py-3 px-4">Escrow Amount</th>
+                  <th className="py-3 px-4">Payment</th>
+                  <th className="py-3 px-4">Lease Status</th>
+                  <th className="py-3 px-4 text-right">Update Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#ECEBE3]">
+                {filtered.map((b) => (
+                  <tr key={b.id} className="hover:bg-[#F7F6F1] transition-colors">
+                    <td className="py-3.5 px-4">
+                      <span className="font-mono text-[10px] text-[#8A948D] block">{b.id}</span>
+                      <p className="font-bold text-[#183C32]">{b.customerName}</p>
+                      <p className="text-[10px] text-[#6A726B]">{b.customerEmail}</p>
+                    </td>
+
+                    <td className="py-3.5 px-4">
+                      <p className="font-semibold text-[#202824]">{b.equipmentTitle}</p>
+                      <span className="text-[10px] text-[#6A726B]">
+                        Qty: {b.quantity} • {b.equipmentCategory}
+                      </span>
+                    </td>
+
+                    <td className="py-3.5 px-4">
+                      <span className="font-semibold text-[#202824] block">
+                        {b.startDate} to {b.endDate}
+                      </span>
+                      <span className="text-[10px] text-[#8A948D] font-mono">{b.durationText}</span>
+                    </td>
+
+                    <td className="py-3.5 px-4 font-heading font-extrabold text-sm text-[#183C32]">
+                      ${b.totalAmount.toLocaleString()}
+                    </td>
+
+                    <td className="py-3.5 px-4">
+                      <select
+                        value={b.paymentStatus}
+                        onChange={(e) =>
+                          updatePaymentStatus(b.id, e.target.value as PaymentStatus)
+                        }
+                        className="text-[11px] font-bold px-2 py-1 rounded-xs bg-[#F7F6F1] border border-[#DCDBCF] text-[#183C32] cursor-pointer"
+                      >
+                        <option value="paid">Paid (Escrow)</option>
+                        <option value="pending">Pending</option>
+                        <option value="refunded">Refunded</option>
+                      </select>
+                    </td>
+
+                    <td className="py-3.5 px-4">
+                      <select
+                        value={b.bookingStatus}
+                        onChange={(e) =>
+                          updateBookingStatus(b.id, e.target.value as BookingStatus)
+                        }
+                        className="text-[11px] font-bold px-2 py-1 rounded-xs bg-[#183C32] text-white cursor-pointer"
+                      >
+                        <option value="confirmed">Confirmed Active</option>
+                        <option value="pending">Pending Dispatch</option>
+                        <option value="completed">Completed Pass</option>
+                        <option value="cancelled">Cancelled</option>
+                      </select>
+                    </td>
+
+                    <td className="py-3.5 px-4 text-right">
+                      {b.bookingStatus !== "completed" ? (
+                        <button
+                          onClick={() => updateBookingStatus(b.id, "completed")}
+                          className="px-2.5 py-1 bg-[#2E6B4F] hover:bg-[#245344] text-white text-[10px] font-bold uppercase rounded-xs transition-colors inline-flex items-center gap-1 shadow-2xs cursor-pointer"
+                          title="Mark lease returned & inspect pass"
+                        >
+                          <Check className="w-3 h-3" />
+                          <span>Sign Off</span>
+                        </button>
+                      ) : (
+                        <span className="text-[10px] text-[#2E6B4F] font-bold">
+                          Audit Passed
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-white p-12 rounded-sm border border-[#E5E4DC] text-center space-y-4">
+          <div className="w-14 h-14 rounded-full bg-[#EBEAE3] text-[#6A726B] flex items-center justify-center mx-auto">
+            <PackageOpen className="w-7 h-7" />
+          </div>
+          <h3 className="font-heading text-lg font-bold text-[#183C32]">
+            No rental dispatches found
+          </h3>
+          <p className="text-xs sm:text-sm text-[#6A726B] max-w-md mx-auto">
+            No active contractor requisitions found matching this status filter.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

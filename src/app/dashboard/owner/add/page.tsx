@@ -11,9 +11,13 @@ import {
   DollarSign,
   FileText,
   MapPin,
+  Upload,
+  Loader2,
 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { EquipmentCategory, EquipmentCondition, RentalType } from "@/types";
+import { uploadApi } from "@/lib/api";
+import { toast } from "sonner";
 
 export default function AddEquipmentPage() {
   const router = useRouter();
@@ -37,6 +41,7 @@ export default function AddEquipmentPage() {
     "Commercial contractor license required.\nDaily maintenance log must be signed.\nFuel replacement policy applies."
   );
 
+  const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -56,7 +61,34 @@ export default function AddEquipmentPage() {
     "Fair",
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Handle direct file upload to ImgBB
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select a valid image file (PNG, JPG, WEBP).");
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Image file size exceeds 10MB limit.");
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const uploadedUrl = await uploadApi.uploadImage(file);
+      setImageUrl(uploadedUrl);
+      toast.success("Machinery photo uploaded successfully via ImgBB!");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to upload image. Please try entering a direct image URL.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -77,8 +109,8 @@ export default function AddEquipmentPage() {
       .map((t) => t.trim())
       .filter((t) => t.length > 0);
 
-    setTimeout(() => {
-      addEquipment({
+    try {
+      await addEquipment({
         title,
         slug: title.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
         description,
@@ -98,37 +130,42 @@ export default function AddEquipmentPage() {
           currentUser?.avatarUrl ||
           "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80",
         ownerVerified: true,
-        terms: parsedTerms.length > 0 ? parsedTerms : ["Standard lease agreement applies."],
         specifications: [
-          { label: "Manufacturer Brand", value: brand },
-          { label: "Model Series", value: model },
-          { label: "Condition Rating", value: condition },
-          { label: "Yard Base", value: location },
+          { label: "Power", value: "Industrial Standard" },
+          { label: "Condition", value: condition },
+          { label: "Manufacturer", value: brand },
+          { label: "Model", value: model },
         ],
-        status: "active",
+        terms: parsedTerms.length > 0 ? parsedTerms : ["Standard commercial lease agreement"],
+        status: "pending",
       });
 
-      setIsSubmitting(false);
+      toast.success("Machinery submitted successfully! Forwarded for administrator safety audit.");
       router.push("/dashboard/owner/equipment");
-    }, 700);
+    } catch (err: any) {
+      setError(err?.message || "Failed to submit equipment listing");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <div className="space-y-6 max-w-4xl">
-      {/* Page Header */}
+    <div className="max-w-4xl space-y-6">
+      {/* Header */}
       <div>
         <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#D99A42]">
           <PlusCircle className="w-3.5 h-3.5" />
-          <span>New Fleet Listing</span>
+          <span>Fleet Expansion</span>
         </div>
         <h1 className="font-heading text-2xl sm:text-3xl font-extrabold text-[#183C32]">
-          List Machinery for Rental
+          List Machinery for Commercial Rental
         </h1>
         <p className="text-xs sm:text-sm text-[#6A726B] mt-0.5">
-          Submit verified heavy equipment, cinema optics, or commercial vehicles to the Rentora marketplace.
+          Submit equipment specs, photography, and lease rates. All listings undergo a fast safety review before publication.
         </p>
       </div>
 
+      {/* Form Error Banner */}
       {error && (
         <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xs flex items-center gap-2">
           <AlertCircle className="w-4 h-4 shrink-0" />
@@ -136,34 +173,36 @@ export default function AddEquipmentPage() {
         </div>
       )}
 
-      {/* Form Card */}
-      <form onSubmit={handleSubmit} className="bg-white p-6 sm:p-8 rounded-sm border border-[#E5E4DC] shadow-2xs space-y-6">
-        {/* Section 1: Basic Identifiers */}
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white p-6 sm:p-8 rounded-sm border border-[#E5E4DC] shadow-2xs space-y-6"
+      >
+        {/* Section 1: Core Equipment Info */}
         <div className="space-y-4">
           <h2 className="font-heading text-sm font-bold uppercase tracking-wider text-[#183C32] border-b border-[#ECEBE3] pb-2 flex items-center gap-2">
             <Wrench className="w-4 h-4 text-[#D99A42]" />
-            <span>1. Equipment Identifiers &amp; Classification</span>
+            <span>1. Machinery Identification &amp; Category</span>
           </h2>
 
-          <div>
-            <label htmlFor="eq-title" className="block text-[11px] font-bold uppercase tracking-wider text-[#6A726B] mb-1">
-              Equipment Title *
-            </label>
-            <input
-              id="eq-title"
-              type="text"
-              required
-              placeholder="e.g. Komatsu PC210LC-11 Hydraulic Excavator"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-3 py-2 text-xs bg-[#F7F6F1] border border-[#E0DFD6] rounded-xs text-[#202824] focus:outline-hidden focus:border-[#183C32] focus:bg-white font-semibold"
-            />
-          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="sm:col-span-2">
+              <label htmlFor="eq-title" className="block text-[11px] font-bold uppercase tracking-wider text-[#6A726B] mb-1">
+                Equipment Title / Listing Name *
+              </label>
+              <input
+                id="eq-title"
+                type="text"
+                required
+                placeholder="e.g. Caterpillar 320 Hydraulic Excavator (20-Ton)"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full px-3 py-2 text-xs bg-[#F7F6F1] border border-[#E0DFD6] rounded-xs text-[#202824] focus:outline-hidden focus:border-[#183C32] focus:bg-white"
+              />
+            </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label htmlFor="eq-category" className="block text-[11px] font-bold uppercase tracking-wider text-[#6A726B] mb-1">
-                Category *
+                Equipment Category *
               </label>
               <select
                 id="eq-category"
@@ -179,13 +218,13 @@ export default function AddEquipmentPage() {
 
             <div>
               <label htmlFor="eq-brand" className="block text-[11px] font-bold uppercase tracking-wider text-[#6A726B] mb-1">
-                Brand / Manufacturer *
+                Manufacturer / Brand *
               </label>
               <input
                 id="eq-brand"
                 type="text"
                 required
-                placeholder="e.g. Caterpillar, ARRI"
+                placeholder="e.g. Caterpillar, Komatsu, Bobcat"
                 value={brand}
                 onChange={(e) => setBrand(e.target.value)}
                 className="w-full px-3 py-2 text-xs bg-[#F7F6F1] border border-[#E0DFD6] rounded-xs text-[#202824] focus:outline-hidden focus:border-[#183C32] focus:bg-white"
@@ -194,7 +233,7 @@ export default function AddEquipmentPage() {
 
             <div>
               <label htmlFor="eq-model" className="block text-[11px] font-bold uppercase tracking-wider text-[#6A726B] mb-1">
-                Model Series *
+                Model Number / Designation *
               </label>
               <input
                 id="eq-model"
@@ -310,21 +349,55 @@ export default function AddEquipmentPage() {
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
-            <div className="sm:col-span-8">
-              <label htmlFor="eq-image-url" className="block text-[11px] font-bold uppercase tracking-wider text-[#6A726B] mb-1">
-                Primary High-Resolution Image URL *
-              </label>
-              <input
-                id="eq-image-url"
-                type="url"
-                required
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-                className="w-full px-3 py-2 text-xs bg-[#F7F6F1] border border-[#E0DFD6] rounded-xs text-[#202824] focus:outline-hidden focus:border-[#183C32] focus:bg-white"
-              />
-              <span className="text-[10px] text-[#8A948D] mt-1 block">
-                Provide a crisp, clear photo of the actual equipment in operation or depot yard.
-              </span>
+            <div className="sm:col-span-8 space-y-3">
+              <div>
+                <label htmlFor="eq-image-url" className="block text-[11px] font-bold uppercase tracking-wider text-[#6A726B] mb-1">
+                  Primary High-Resolution Image URL *
+                </label>
+                <input
+                  id="eq-image-url"
+                  type="url"
+                  required
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-[#F7F6F1] border border-[#E0DFD6] rounded-xs text-[#202824] focus:outline-hidden focus:border-[#183C32] focus:bg-white"
+                />
+              </div>
+
+              {/* ImgBB File Upload Input */}
+              <div className="p-3 bg-[#F7F6F1] border border-dashed border-[#DCDBCF] rounded-xs flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <span className="text-xs font-bold text-[#183C32] block flex items-center gap-1.5">
+                    <Upload className="w-3.5 h-3.5 text-[#D99A42]" />
+                    Upload Photo via ImgBB
+                  </span>
+                  <p className="text-[10px] text-[#6A726B]">
+                    JPG, PNG, WEBP up to 10MB. Automatically hosted.
+                  </p>
+                </div>
+                <div>
+                  <label className="px-3 py-1.5 bg-white hover:bg-[#EBEAE3] border border-[#DCDBCF] text-xs font-bold text-[#183C32] rounded-xs cursor-pointer shadow-2xs inline-flex items-center gap-1.5 transition-colors">
+                    {isUploading ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-[#183C32]" />
+                        <span>Uploading...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-3.5 h-3.5 text-[#183C32]" />
+                        <span>Choose File</span>
+                      </>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      disabled={isUploading}
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+              </div>
             </div>
 
             {/* Live Image Preview Thumbnail */}
@@ -392,11 +465,20 @@ export default function AddEquipmentPage() {
           </button>
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || isUploading}
             className="px-6 py-2.5 bg-[#183C32] hover:bg-[#245344] text-white text-xs font-bold uppercase tracking-wider rounded-xs transition-colors shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50"
           >
-            <PlusCircle className="w-4 h-4 text-[#D99A42]" />
-            <span>{isSubmitting ? "Publishing to Fleet..." : "Publish Fleet Listing"}</span>
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-[#D99A42]" />
+                <span>Publishing to Fleet...</span>
+              </>
+            ) : (
+              <>
+                <PlusCircle className="w-4 h-4 text-[#D99A42]" />
+                <span>Publish Fleet Listing</span>
+              </>
+            )}
           </button>
         </div>
       </form>
