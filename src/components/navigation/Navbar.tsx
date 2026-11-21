@@ -123,14 +123,12 @@ export function Navbar() {
               {/* User Dropdown or Guest Auth Buttons */}
               {currentUser ? (
                 <div className="flex items-center gap-2">
-                  {/* Quick Sign Up / Test New Account link visible even when logged in */}
                   <Link
-                    href="/register"
-                    className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-[#183C32] hover:text-[#245344] bg-[#EBEAE3] hover:bg-[#E0DED3] border border-[#DCDBCF] rounded-full transition-colors"
-                    title="Test Sign Up / Create New Account"
+                    href={getDashboardHref()}
+                    className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-white bg-[#183C32] hover:bg-[#245344] rounded-full transition-colors shadow-2xs"
                   >
-                    <UserPlus className="w-3.5 h-3.5 text-[#D99A42]" />
-                    <span>Sign Up</span>
+                    <LayoutDashboard className="w-3.5 h-3.5 text-[#D99A42]" />
+                    <span>Dashboard</span>
                   </Link>
 
                   <div className="relative">
@@ -322,27 +320,27 @@ export function Navbar() {
                 </div>
               )}
 
-              {/* ALWAYS accessible Sign In & Register buttons in mobile menu */}
+              {/* Mobile Auth Actions */}
               <div className="pt-2 border-t border-[#ECEBE3]">
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  <Link
-                    href="/login"
-                    className="flex items-center justify-center py-2.5 text-center text-sm font-semibold border border-[#DCDBCF] bg-white rounded-sm text-[#183C32]"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Sign In
-                  </Link>
-                  <Link
-                    href="/register"
-                    className="flex items-center justify-center gap-1.5 py-2.5 text-center text-sm font-bold bg-[#183C32] text-[#F7F6F1] rounded-sm"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    <UserPlus className="w-4 h-4 text-[#D99A42]" />
-                    <span>Register</span>
-                  </Link>
-                </div>
-
-                {currentUser && (
+                {!currentUser ? (
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <Link
+                      href="/login"
+                      className="flex items-center justify-center py-2.5 text-center text-sm font-semibold border border-[#DCDBCF] bg-white rounded-sm text-[#183C32]"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Sign In
+                    </Link>
+                    <Link
+                      href="/register"
+                      className="flex items-center justify-center gap-1.5 py-2.5 text-center text-sm font-bold bg-[#183C32] text-[#F7F6F1] rounded-sm"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <UserPlus className="w-4 h-4 text-[#D99A42]" />
+                      <span>Register</span>
+                    </Link>
+                  </div>
+                ) : (
                   <button
                     onClick={() => {
                       logout();

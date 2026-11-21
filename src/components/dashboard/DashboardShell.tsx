@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
@@ -24,6 +24,7 @@ import {
   Building2,
 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
+import { toast } from "sonner";
 
 interface DashboardShellProps {
   children: React.ReactNode;
@@ -37,6 +38,33 @@ export function DashboardShell({ children }: DashboardShellProps) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+
+  // Role-based route guard
+  const isUnauthorized =
+    currentRole === "guest" ||
+    !currentUser ||
+    (pathname.startsWith("/dashboard/admin") && currentRole !== "admin") ||
+    (pathname.startsWith("/dashboard/owner") && currentRole !== "owner" && currentRole !== "admin");
+
+  useEffect(() => {
+    if (currentRole === "guest" || !currentUser) {
+      toast.error("Please sign in to access your dashboard.");
+      router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
+      return;
+    }
+
+    if (pathname.startsWith("/dashboard/admin") && currentRole !== "admin") {
+      toast.error("Access denied: Platform Administrator privileges required.");
+      router.replace(currentRole === "owner" ? "/dashboard/owner" : "/dashboard/customer");
+      return;
+    }
+
+    if (pathname.startsWith("/dashboard/owner") && currentRole !== "owner" && currentRole !== "admin") {
+      toast.error("Access denied: Machinery Fleet Owner privileges required.");
+      router.replace("/dashboard/customer");
+      return;
+    }
+  }, [currentRole, currentUser, pathname, router]);
 
   // Role-based navigation links
   const customerLinks = [
@@ -98,6 +126,17 @@ export function DashboardShell({ children }: DashboardShellProps) {
       read: true,
     },
   ];
+
+  if (isUnauthorized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F7F6F1]">
+        <div className="flex flex-col items-center gap-3 p-8 text-center max-w-md">
+          <div className="w-10 h-10 border-4 border-[#183C32] border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm font-semibold text-[#183C32]">Verifying access permissions...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex bg-[#F7F6F1]">

@@ -21,7 +21,7 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get("redirect");
-  const { loginUser, loginWithGoogle } = useApp();
+  const { currentUser, currentRole, loginUser, loginWithGoogle } = useApp();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -29,6 +29,12 @@ function LoginForm() {
   const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (currentUser && currentRole !== "guest") {
+      router.replace(redirectUrl || `/dashboard/${currentRole}`);
+    }
+  }, [currentUser, currentRole, redirectUrl, router]);
 
   useEffect(() => {
     const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;

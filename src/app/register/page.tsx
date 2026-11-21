@@ -24,7 +24,7 @@ import { toast } from "sonner";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { registerUser, loginWithGoogle } = useApp();
+  const { currentUser, currentRole, registerUser, loginWithGoogle } = useApp();
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -38,6 +38,12 @@ export default function RegisterPage() {
   const [termsAgreed, setTermsAgreed] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (currentUser && currentRole !== "guest") {
+      router.replace(`/dashboard/${currentRole}`);
+    }
+  }, [currentUser, currentRole, router]);
 
   useEffect(() => {
     const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
