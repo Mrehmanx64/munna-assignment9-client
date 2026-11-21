@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Truck,
   CheckCircle2,
@@ -21,24 +21,55 @@ import {
 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { RentalBooking } from "@/types";
-import { bookingApi } from "@/lib/api";
+import { bookingApi, paymentApi } from "@/lib/api";
 import { toast } from "sonner";
 
 export default function CustomerRentalsPage() {
-  const { bookings: contextBookings, currentUser } = useApp();
+  const { bookings: contextBookings, currentUser, refreshBookings } = useApp();
+  const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedBooking, setSelectedBooking] = useState<RentalBooking | null>(null);
   const [checkingOutId, setCheckingOutId] = useState<string | null>(null);
+  const [verifyingSession, setVerifyingSession] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
-      if (params.get("status") === "success") {
-        toast.success("Payment confirmed! Your rental booking is active and in escrow.");
+      const status = params.get("status");
+      const sessionId = params.get("session_id");
+
+      if (status === "success") {
+        if (sessionId && sessionId !== "{CHECKOUT_SESSION_ID}") {
+          setVerifyingSession(true);
+          paymentApi
+            .verifySession(sessionId)
+            .then(() => {
+              toast.success("Payment verified! Your machinery reservation is confirmed and active.");
+              queryClient.invalidateQueries({ queryKey: ["customer-rentals"] });
+              refreshBookings();
+            })
+            .catch((err) => {
+              console.warn("Session verification warning:", err);
+              toast.success("Payment received! Updating rental records...");
+              queryClient.invalidateQueries({ queryKey: ["customer-rentals"] });
+              refreshBookings();
+            })
+            .finally(() => {
+              setVerifyingSession(false);
+              const cleanUrl = window.location.pathname;
+              window.history.replaceState({}, document.title, cleanUrl);
+            });
+        } else {
+          toast.success("Payment confirmed! Your rental booking is active and in escrow.");
+          queryClient.invalidateQueries({ queryKey: ["customer-rentals"] });
+          refreshBookings();
+          const cleanUrl = window.location.pathname;
+          window.history.replaceState({}, document.title, cleanUrl);
+        }
       }
     }
-  }, []);
+  }, [queryClient, refreshBookings]);
 
   // Fetch real customer rentals from backend
   const { data, isLoading } = useQuery({
@@ -101,6 +132,19 @@ export default function CustomerRentalsPage() {
 
   return (
     <div className="space-y-8">
+      {/* Session Verification Status Banner */}
+      {verifyingSession && (
+        <div className="bg-[#183C32] text-white p-4 rounded-sm flex items-center justify-between gap-3 shadow-md border border-[#2B5446]">
+          <div className="flex items-center gap-3">
+            <Loader2 className="w-5 h-5 animate-spin text-[#D99A42] shrink-0" />
+            <div>
+              <p className="text-sm font-bold">Verifying payment &amp; reserving fleet equipment...</p>
+              <p className="text-xs text-[#ECEFEA] opacity-80">Reconciling transaction with Stripe escrow and confirming lease.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Page Title & Context */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>

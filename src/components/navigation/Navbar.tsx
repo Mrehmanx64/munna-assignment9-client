@@ -238,22 +238,14 @@ export function Navbar() {
                           </Link>
                         </div>
 
-                        {/* Direct testing and logout actions */}
+                        {/* Sign Out action */}
                         <div className="border-t border-[#ECEBE3] pt-1">
-                          <Link
-                            href="/register"
-                            className="flex items-center gap-2.5 px-4 py-2 text-sm text-[#183C32] hover:bg-[#F7F6F1] font-semibold"
-                            onClick={() => setUserDropdownOpen(false)}
-                          >
-                            <UserPlus className="w-4 h-4 text-[#D99A42]" />
-                            <span>Test New Registration</span>
-                          </Link>
                           <button
                             onClick={() => {
                               logout();
                               setUserDropdownOpen(false);
                             }}
-                            className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-[#B93838] hover:bg-red-50 text-left font-medium"
+                            className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-[#B93838] hover:bg-red-50 text-left font-medium cursor-pointer transition-colors"
                           >
                             <LogOut className="w-4 h-4 text-[#B93838]" />
                             <span>Sign Out</span>

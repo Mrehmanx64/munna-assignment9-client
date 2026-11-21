@@ -433,6 +433,13 @@ export const bookingApi = {
   },
 };
 
+export const paymentApi = {
+  async verifySession(sessionId: string) {
+    const res = await api.get(`/payments/verify/${sessionId}`);
+    return res.data?.data;
+  },
+};
+
 export const favoriteApi = {
   async getFavorites(params?: any) {
     const res = await api.get("/favorites", { params });
