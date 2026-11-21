@@ -197,6 +197,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // ROLE & AUTH METHODS
   // --------------------------------------------------------------------------
   const setCurrentRole = (role: UserRole | "guest") => {
+    // In production, persona switching is disabled: backend JWT is the sole authority for role
+    if (process.env.NODE_ENV === "production") {
+      if (role === "guest") {
+        logout();
+        return;
+      }
+      if (registeredUser) {
+        if (registeredUser.role !== role) {
+          toast.error("Role switching is disabled in production. Please log in with an account that possesses this role.");
+          return;
+        }
+      } else {
+        toast.error("Please sign in to access this role.");
+        return;
+      }
+    }
+
     setRoleState(role);
     try {
       localStorage.setItem("rentora_role", role);

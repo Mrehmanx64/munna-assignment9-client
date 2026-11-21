@@ -241,28 +241,39 @@ export function DashboardShell({ children }: DashboardShellProps) {
 
           {/* Right Controls */}
           <div className="flex items-center gap-3">
-            {/* Live Role Switcher Pill */}
-            <div className="hidden sm:flex items-center text-xs bg-[#F7F6F1] border border-[#DCDBCF] rounded-full p-0.5">
-              <span className="px-2.5 py-1 text-[#6A726B] font-semibold text-[10px] uppercase tracking-wider">
-                View:
-              </span>
-              {(["customer", "owner", "admin"] as const).map((r) => (
-                <button
-                  key={r}
-                  onClick={() => {
-                    setCurrentRole(r);
-                    router.push(`/dashboard/${r}`);
-                  }}
-                  className={`px-2.5 py-0.5 rounded-full font-semibold transition-all capitalize text-[11px] cursor-pointer ${
-                    currentRole === r
-                      ? "bg-[#183C32] text-white shadow-2xs"
-                      : "text-[#555E57] hover:text-[#183C32]"
-                  }`}
-                >
-                  {r}
-                </button>
-              ))}
-            </div>
+            {/* Live Role Switcher Pill (Dev only) or Role Badge (Prod) */}
+            {process.env.NODE_ENV !== "production" ? (
+              <div className="hidden sm:flex items-center text-xs bg-[#F7F6F1] border border-[#DCDBCF] rounded-full p-0.5">
+                <span className="px-2.5 py-1 text-[#6A726B] font-semibold text-[10px] uppercase tracking-wider">
+                  View:
+                </span>
+                {(["customer", "owner", "admin"] as const).map((r) => (
+                  <button
+                    key={r}
+                    onClick={() => {
+                      setCurrentRole(r);
+                      router.push(`/dashboard/${r}`);
+                    }}
+                    className={`px-2.5 py-0.5 rounded-full font-semibold transition-all capitalize text-[11px] cursor-pointer ${
+                      currentRole === r
+                        ? "bg-[#183C32] text-white shadow-2xs"
+                        : "text-[#555E57] hover:text-[#183C32]"
+                    }`}
+                  >
+                    {r}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="hidden sm:flex items-center text-xs bg-[#F7F6F1] border border-[#DCDBCF] rounded-full px-3 py-1">
+                <span className="text-[#6A726B] font-semibold text-[10px] uppercase tracking-wider mr-1.5">
+                  Clearance:
+                </span>
+                <span className="font-bold text-[#183C32] capitalize text-xs">
+                  {currentRole}
+                </span>
+              </div>
+            )}
 
             {/* Notifications Bell */}
             <div className="relative">

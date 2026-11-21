@@ -24,8 +24,9 @@ function LoginForm() {
   const redirectUrl = searchParams.get("redirect");
   const { loginUser } = useApp();
 
-  const [email, setEmail] = useState("alexander.hayes@apexbuild.com");
-  const [password, setPassword] = useState("Password@1234");
+  const isDev = process.env.NODE_ENV !== "production";
+  const [email, setEmail] = useState(isDev ? "alexander.hayes@apexbuild.com" : "");
+  const [password, setPassword] = useState(isDev ? "Password@1234" : "");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
@@ -75,6 +76,10 @@ function LoginForm() {
   };
 
   const handleQuickRole = async (role: UserRole) => {
+    if (!isDev) {
+      toast.error("Quick demo sign-in is disabled in production. Please enter your credentials.");
+      return;
+    }
     let emailToUse = "alexander.hayes@apexbuild.com";
     if (role === "owner") {
       emailToUse = "marcus@vanceheavygear.com";
@@ -123,36 +128,38 @@ function LoginForm() {
             </div>
           )}
 
-          {/* Quick Demo Persona Shortcuts */}
-          <div className="p-3.5 bg-[#EBEAE3] border border-[#DCDBCF] rounded-xs space-y-2">
-            <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[#183C32]">
-              <UserCheck className="w-3.5 h-3.5 text-[#D99A42]" />
-              <span>One-Click Demo Personas</span>
+          {/* Quick Demo Persona Shortcuts (Development only) */}
+          {isDev && (
+            <div className="p-3.5 bg-[#EBEAE3] border border-[#DCDBCF] rounded-xs space-y-2">
+              <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[#183C32]">
+                <UserCheck className="w-3.5 h-3.5 text-[#D99A42]" />
+                <span>One-Click Demo Personas (Dev Mode)</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleQuickRole("customer")}
+                  className="py-1.5 px-2 bg-white hover:bg-[#183C32] hover:text-white border border-[#DCDBCF] text-[11px] font-semibold text-[#183C32] rounded-xs transition-colors shadow-2xs text-center cursor-pointer"
+                >
+                  Customer
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickRole("owner")}
+                  className="py-1.5 px-2 bg-white hover:bg-[#183C32] hover:text-white border border-[#DCDBCF] text-[11px] font-semibold text-[#183C32] rounded-xs transition-colors shadow-2xs text-center cursor-pointer"
+                >
+                  Fleet Owner
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickRole("admin")}
+                  className="py-1.5 px-2 bg-white hover:bg-[#183C32] hover:text-white border border-[#DCDBCF] text-[11px] font-semibold text-[#183C32] rounded-xs transition-colors shadow-2xs text-center cursor-pointer"
+                >
+                  Administrator
+                </button>
+              </div>
             </div>
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={() => handleQuickRole("customer")}
-                className="py-1.5 px-2 bg-white hover:bg-[#183C32] hover:text-white border border-[#DCDBCF] text-[11px] font-semibold text-[#183C32] rounded-xs transition-colors shadow-2xs text-center"
-              >
-                Customer
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickRole("owner")}
-                className="py-1.5 px-2 bg-white hover:bg-[#183C32] hover:text-white border border-[#DCDBCF] text-[11px] font-semibold text-[#183C32] rounded-xs transition-colors shadow-2xs text-center"
-              >
-                Fleet Owner
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickRole("admin")}
-                className="py-1.5 px-2 bg-white hover:bg-[#183C32] hover:text-white border border-[#DCDBCF] text-[11px] font-semibold text-[#183C32] rounded-xs transition-colors shadow-2xs text-center"
-              >
-                Administrator
-              </button>
-            </div>
-          </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Email Field */}

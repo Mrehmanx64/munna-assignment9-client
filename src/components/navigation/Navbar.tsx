@@ -100,25 +100,36 @@ export function Navbar() {
 
             {/* Right Side Actions */}
             <div className="flex items-center gap-2.5 sm:gap-3">
-              {/* Demo Persona Switcher Pill */}
-              <div className="hidden md:flex items-center text-xs bg-[#EBEAE3] border border-[#DCDBCF] rounded-full p-0.5">
-                <span className="px-2.5 py-1 text-[#6A726B] font-medium text-[11px] uppercase tracking-wider">
-                  Role:
-                </span>
-                {(["guest", "customer", "owner", "admin"] as const).map((r) => (
-                  <button
-                    key={r}
-                    onClick={() => setCurrentRole(r as UserRole | "guest")}
-                    className={`px-2.5 py-1 rounded-full font-medium transition-all capitalize ${
-                      currentRole === r
-                        ? "bg-[#183C32] text-[#F7F6F1] shadow-2xs"
-                        : "text-[#555E57] hover:text-[#183C32]"
-                    }`}
-                  >
-                    {r}
-                  </button>
-                ))}
-              </div>
+              {/* Role Indicator / Demo Persona Switcher Pill */}
+              {process.env.NODE_ENV !== "production" ? (
+                <div className="hidden md:flex items-center text-xs bg-[#EBEAE3] border border-[#DCDBCF] rounded-full p-0.5">
+                  <span className="px-2.5 py-1 text-[#6A726B] font-medium text-[11px] uppercase tracking-wider">
+                    Role:
+                  </span>
+                  {(["guest", "customer", "owner", "admin"] as const).map((r) => (
+                    <button
+                      key={r}
+                      onClick={() => setCurrentRole(r as UserRole | "guest")}
+                      className={`px-2.5 py-1 rounded-full font-medium transition-all capitalize ${
+                        currentRole === r
+                          ? "bg-[#183C32] text-[#F7F6F1] shadow-2xs"
+                          : "text-[#555E57] hover:text-[#183C32]"
+                      }`}
+                    >
+                      {r}
+                    </button>
+                  ))}
+                </div>
+              ) : currentUser ? (
+                <div className="hidden md:flex items-center text-xs bg-[#EBEAE3] border border-[#DCDBCF] rounded-full px-3 py-1">
+                  <span className="text-[#6A726B] font-medium text-[11px] uppercase tracking-wider mr-1.5">
+                    Role:
+                  </span>
+                  <span className="font-bold text-[#183C32] capitalize text-xs">
+                    {currentRole}
+                  </span>
+                </div>
+              ) : null}
 
               {/* Search Shortcut */}
               <Link
@@ -331,26 +342,28 @@ export function Navbar() {
                 </Link>
               ))}
 
-              <div className="pt-3 border-t border-[#ECEBE3] my-2">
-                <p className="px-3 text-xs font-bold uppercase tracking-wider text-[#6A726B] mb-2">
-                  Active Persona Switcher
-                </p>
-                <div className="grid grid-cols-4 gap-1.5 px-2">
-                  {(["guest", "customer", "owner", "admin"] as const).map((r) => (
-                    <button
-                      key={r}
-                      onClick={() => setCurrentRole(r as UserRole | "guest")}
-                      className={`py-1.5 text-xs rounded-sm font-medium capitalize text-center border ${
-                        currentRole === r
-                          ? "bg-[#183C32] text-white border-[#183C32]"
-                          : "bg-white text-[#4A524D] border-[#DCDBCF]"
-                      }`}
-                    >
-                      {r}
-                    </button>
-                  ))}
+              {process.env.NODE_ENV !== "production" && (
+                <div className="pt-3 border-t border-[#ECEBE3] my-2">
+                  <p className="px-3 text-xs font-bold uppercase tracking-wider text-[#6A726B] mb-2">
+                    Active Persona Switcher (Dev Mode)
+                  </p>
+                  <div className="grid grid-cols-4 gap-1.5 px-2">
+                    {(["guest", "customer", "owner", "admin"] as const).map((r) => (
+                      <button
+                        key={r}
+                        onClick={() => setCurrentRole(r as UserRole | "guest")}
+                        className={`py-1.5 text-xs rounded-sm font-medium capitalize text-center border ${
+                          currentRole === r
+                            ? "bg-[#183C32] text-white border-[#183C32]"
+                            : "bg-white text-[#4A524D] border-[#DCDBCF]"
+                        }`}
+                      >
+                        {r}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {currentUser && (
                 <div className="pt-2">

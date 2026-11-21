@@ -101,17 +101,15 @@ Rentora features an integrated **Interactive Persona Switcher** embedded directl
 
 ---
 
-## 🔐 Demo Credentials & Test Personas
+## 🔐 Role Access & Authentication Model
 
-For ease of review, Rentora provides pre-configured credentials across all three platform roles:
+Rentora implements strict role-based access control across three user tiers:
 
-| Role | Email | Password | Access & Capabilities |
-|---|---|---|---|
-| **Platform Administrator** | `admin@rentora.com` | `Admin123!` | Safety audit approvals, escrow ledger, user role directory, platform-wide analytics. |
-| **Fleet Owner** | `owner@rentora.com` | `Owner123!` | Machinery creation (ImgBB), fleet inventory, rental dispatch, fleet revenue analytics. |
-| **Contractor / Customer** | `customer@rentora.com` | `Customer123!` | Catalog browsing, persistent favorites, escrow booking with Stripe Checkout, rental slips. |
+- **Customer / Renter**: Default role assigned upon registration. Access to equipment booking, persistent favorites, rental agreements, and mobilization tracking.
+- **Fleet Owner**: Access to machinery listing (with ImgBB uploads), fleet inventory dispatch, rental approval, and fleet revenue analytics.
+- **Platform Administrator**: Access to machinery safety approvals/rejections, global escrow ledger, user directory management, and platform-wide analytics.
 
-*(All three personas can also be loaded instantly via the persona chip shortcuts on `/login` and the top navigation switcher).*
+In development mode, developers can test each role using the non-production persona switcher or test registration shortcuts. In production, roles are strictly verified and enforced by backend JWT signatures and database authorization checks. Predictable demo credentials and automated account creation are disabled in production.
 
 ---
 
@@ -127,11 +125,8 @@ cp .env.example .env.local
 |---|---|---|
 | `NEXT_PUBLIC_APP_URL` | Frontend origin URL | `http://localhost:3000` |
 | `NEXT_PUBLIC_API_URL` | Backend Express API base endpoint | `http://localhost:5000/api` |
-| `NEXT_PUBLIC_SERVER_URL` | Backend root URL | `http://localhost:5000` |
-| `NEXT_PUBLIC_BETTER_AUTH_URL` | BetterAuth server endpoint | `http://localhost:5000` |
 | `NEXT_PUBLIC_GOOGLE_CLIENT_ID`| Google OAuth client ID for button | `your_google_client_id.apps.googleusercontent.com` |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe publishable key | `pk_test_placeholder_key` |
-| `NEXT_PUBLIC_IMGBB_API_KEY` | ImgBB image hosting API key | `your_imgbb_api_key_placeholder` |
 
 ---
 

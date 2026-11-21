@@ -143,26 +143,28 @@ export default function RegisterPage() {
             </div>
           )}
 
-          {/* Quick Demo Autofill Bar for Instant Testing */}
-          <div className="bg-[#EBEAE3] p-2.5 rounded-xs border border-[#DCDBCF] flex flex-col sm:flex-row items-center justify-between gap-2 text-xs">
-            <span className="text-[11px] font-semibold text-[#525B55]">Testing shortcuts:</span>
-            <div className="flex items-center gap-1.5 w-full sm:w-auto">
-              <button
-                type="button"
-                onClick={() => fillQuickDemo("customer")}
-                className="flex-1 sm:flex-initial px-2.5 py-1 text-[11px] font-semibold bg-white border border-[#DCDBCF] hover:border-[#183C32] text-[#183C32] rounded-xs transition-colors cursor-pointer"
-              >
-                Auto-fill Customer
-              </button>
-              <button
-                type="button"
-                onClick={() => fillQuickDemo("owner")}
-                className="flex-1 sm:flex-initial px-2.5 py-1 text-[11px] font-semibold bg-white border border-[#DCDBCF] hover:border-[#183C32] text-[#183C32] rounded-xs transition-colors cursor-pointer"
-              >
-                Auto-fill Owner
-              </button>
+          {/* Quick Demo Autofill Bar for Instant Testing (Dev Mode only) */}
+          {process.env.NODE_ENV !== "production" && (
+            <div className="bg-[#EBEAE3] p-2.5 rounded-xs border border-[#DCDBCF] flex flex-col sm:flex-row items-center justify-between gap-2 text-xs">
+              <span className="text-[11px] font-semibold text-[#525B55]">Testing shortcuts:</span>
+              <div className="flex items-center gap-1.5 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => fillQuickDemo("customer")}
+                  className="flex-1 sm:flex-initial px-2.5 py-1 text-[11px] font-semibold bg-white border border-[#DCDBCF] hover:border-[#183C32] text-[#183C32] rounded-xs transition-colors cursor-pointer"
+                >
+                  Auto-fill Customer
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fillQuickDemo("owner")}
+                  className="flex-1 sm:flex-initial px-2.5 py-1 text-[11px] font-semibold bg-white border border-[#DCDBCF] hover:border-[#183C32] text-[#183C32] rounded-xs transition-colors cursor-pointer"
+                >
+                  Auto-fill Owner
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Account Role Selection */}
