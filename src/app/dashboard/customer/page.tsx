@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
@@ -30,6 +30,15 @@ export default function CustomerRentalsPage() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedBooking, setSelectedBooking] = useState<RentalBooking | null>(null);
   const [checkingOutId, setCheckingOutId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("status") === "success") {
+        toast.success("Payment confirmed! Your rental booking is active and in escrow.");
+      }
+    }
+  }, []);
 
   // Fetch real customer rentals from backend
   const { data, isLoading } = useQuery({

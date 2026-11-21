@@ -185,6 +185,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           refreshFavorites();
         }
       } catch {
+        // If getMe failed, check if cached active user and token exist in storage
+        if (typeof window !== "undefined") {
+          const cachedUser = localStorage.getItem("rentora_active_user");
+          const cachedToken = localStorage.getItem("rentora_access_token");
+          if (cachedUser && cachedToken) {
+            try {
+              const user = JSON.parse(cachedUser);
+              setRegisteredUser(user);
+              setRoleState(user.role);
+              return;
+            } catch {
+              // Ignore
+            }
+          }
+        }
         // Token expired or unauthenticated: ensure guest state
         if (process.env.NODE_ENV === "production") {
           setRegisteredUser(null);
@@ -192,6 +207,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           if (typeof window !== "undefined") {
             localStorage.removeItem("rentora_active_user");
             localStorage.setItem("rentora_role", "guest");
+            localStorage.removeItem("rentora_access_token");
           }
         }
       }
@@ -386,6 +402,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem("rentora_active_user");
       localStorage.setItem("rentora_role", "guest");
       localStorage.removeItem("rentora_favorites");
+      localStorage.removeItem("rentora_access_token");
     } catch {
       // Ignore
     }

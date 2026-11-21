@@ -25,20 +25,49 @@ export const api = axios.create({
   timeout: 15000,
 });
 
-// In-memory non-persistent token holder (cleared upon page reload / tab close)
-// Persistent authentication is handled exclusively via HTTP-only, Secure cookies
+// In-memory token holder with localStorage persistence to safeguard cross-domain sessions
+// (safeguards against browser third-party cookie blocking between Vercel and Render)
 let inMemoryAccessToken: string | null = null;
+if (typeof window !== "undefined") {
+  try {
+    inMemoryAccessToken = localStorage.getItem("rentora_access_token");
+  } catch {
+    // Ignore
+  }
+}
 
 export const setAccessToken = (token: string | null): void => {
   inMemoryAccessToken = token;
+  if (typeof window !== "undefined") {
+    try {
+      if (token) {
+        localStorage.setItem("rentora_access_token", token);
+      } else {
+        localStorage.removeItem("rentora_access_token");
+      }
+    } catch {
+      // Ignore
+    }
+  }
 };
 
-export const getAccessToken = (): string | null => inMemoryAccessToken;
+export const getAccessToken = (): string | null => {
+  if (inMemoryAccessToken) return inMemoryAccessToken;
+  if (typeof window !== "undefined") {
+    try {
+      return localStorage.getItem("rentora_access_token");
+    } catch {
+      return null;
+    }
+  }
+  return null;
+};
 
-// Attach in-memory access token if present during active session
+// Attach access token if present during active session
 api.interceptors.request.use((config) => {
-  if (inMemoryAccessToken && config.headers) {
-    config.headers.Authorization = `Bearer ${inMemoryAccessToken}`;
+  const token = getAccessToken();
+  if (token && config.headers) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
