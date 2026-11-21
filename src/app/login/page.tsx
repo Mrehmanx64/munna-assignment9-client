@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, Suspense } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -21,7 +21,7 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get("redirect");
-  const { loginUser } = useApp();
+  const { loginUser, loginWithGoogle } = useApp();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -29,6 +29,92 @@ function LoginForm() {
   const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    if (!clientId || typeof window === "undefined") return;
+
+    const handleGoogleCallback = async (response: any) => {
+      try {
+        if (!response.credential) {
+          throw new Error("No Google authentication token received");
+        }
+        const base64Url = response.credential.split(".")[1];
+        const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+        const jsonPayload = decodeURIComponent(
+          atob(base64)
+            .split("")
+            .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+            .join("")
+        );
+        const payload = JSON.parse(jsonPayload);
+
+        const user = await loginWithGoogle({
+          email: payload.email,
+          name: payload.name || payload.email.split("@")[0],
+          avatarUrl: payload.picture,
+          googleId: payload.sub,
+        });
+
+        if (user) {
+          toast.success(`Welcome to Rentora, ${user.name}!`);
+          if (redirectUrl) {
+            router.push(redirectUrl);
+          } else {
+            router.push(`/dashboard/${user.role}`);
+          }
+        }
+      } catch (err: any) {
+        toast.error(err?.message || "Google authentication failed");
+      }
+    };
+
+    const scriptId = "google-gsi-client";
+    let script = document.getElementById(scriptId) as HTMLScriptElement | null;
+    if (!script) {
+      script = document.createElement("script");
+      script.id = scriptId;
+      script.src = "https://accounts.google.com/gsi/client";
+      script.async = true;
+      script.defer = true;
+      document.body.appendChild(script);
+    }
+
+    const initGsi = () => {
+      if ((window as any).google?.accounts?.id) {
+        (window as any).google.accounts.id.initialize({
+          client_id: clientId,
+          callback: handleGoogleCallback,
+          auto_select: false,
+          cancel_on_tap_outside: true,
+        });
+      }
+    };
+
+    if ((window as any).google?.accounts?.id) {
+      initGsi();
+    } else {
+      script.addEventListener("load", initGsi);
+    }
+  }, [loginWithGoogle, redirectUrl, router]);
+
+  const handleGoogleClick = () => {
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      toast.error("Google Client ID is not configured");
+      return;
+    }
+
+    if ((window as any).google?.accounts?.id) {
+      (window as any).google.accounts.id.prompt((notification: any) => {
+        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+          toast.info("Please allow Google popups in your browser or select your account.");
+        }
+      });
+    } else {
+      toast.info("Initializing Google Sign-In, please try again in a moment...");
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -192,19 +278,7 @@ function LoginForm() {
             {/* Google OAuth Button */}
             <button
               type="button"
-              onClick={async () => {
-                toast.info("Google OAuth provider connected in sandbox mode");
-                try {
-                  await loginUser("alexander.hayes@apexbuild.com", "Password@1234", "customer");
-                  if (redirectUrl) {
-                    router.push(redirectUrl);
-                  } else {
-                    router.push("/dashboard/customer");
-                  }
-                } catch (err: any) {
-                  toast.error(err?.message || "Google authentication failed");
-                }
-              }}
+              onClick={handleGoogleClick}
               className="w-full py-2.5 bg-white border border-[#DCDBCF] hover:bg-[#EBEAE3] text-[#202824] text-xs font-semibold rounded-xs transition-colors flex items-center justify-center gap-2.5 shadow-2xs cursor-pointer"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24">

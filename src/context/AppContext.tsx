@@ -39,6 +39,12 @@ interface AppContextType {
     address?: string;
   }) => Promise<User>;
   loginUser: (email: string, password?: string, role?: UserRole) => Promise<User | null>;
+  loginWithGoogle: (googleData: {
+    email: string;
+    name: string;
+    avatarUrl?: string;
+    googleId?: string;
+  }) => Promise<User | null>;
   logout: () => Promise<void>;
   favorites: string[];
   toggleFavorite: (equipmentId: string) => Promise<void>;
@@ -338,6 +344,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return userToUse;
   };
 
+  const loginWithGoogle = async (googleData: {
+    email: string;
+    name: string;
+    avatarUrl?: string;
+    googleId?: string;
+  }): Promise<User | null> => {
+    try {
+      const res = await authApi.googleAuth(googleData);
+      if (res.data?.token) {
+        setAccessToken(res.data.token);
+      }
+      const userToUse = normalizeUser(res.data?.user);
+      setRegisteredUser(userToUse);
+      setRoleState(userToUse.role);
+      try {
+        localStorage.setItem("rentora_active_user", JSON.stringify(userToUse));
+        localStorage.setItem("rentora_role", userToUse.role);
+      } catch {
+        // Ignore
+      }
+      refreshFavorites();
+      refreshBookings();
+      return userToUse;
+    } catch (err: any) {
+      throw new Error(err?.response?.data?.message || err?.message || "Google authentication failed");
+    }
+  };
+
   const logout = async () => {
     try {
       await authApi.logout();
@@ -571,6 +605,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setCurrentRole,
         registerUser,
         loginUser,
+        loginWithGoogle,
         logout,
         favorites,
         toggleFavorite,
