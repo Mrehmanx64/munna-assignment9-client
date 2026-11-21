@@ -13,17 +13,20 @@ export const api = axios.create({
   timeout: 15000,
 });
 
-// Attach JWT access token from localStorage if available
+// In-memory non-persistent token holder (cleared upon page reload / tab close)
+// Persistent authentication is handled exclusively via HTTP-only, Secure cookies
+let inMemoryAccessToken: string | null = null;
+
+export const setAccessToken = (token: string | null): void => {
+  inMemoryAccessToken = token;
+};
+
+export const getAccessToken = (): string | null => inMemoryAccessToken;
+
+// Attach in-memory access token if present during active session
 api.interceptors.request.use((config) => {
-  if (typeof window !== "undefined") {
-    try {
-      const token = localStorage.getItem("rentora_token");
-      if (token && config.headers) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-    } catch {
-      // Ignore storage errors
-    }
+  if (inMemoryAccessToken && config.headers) {
+    config.headers.Authorization = `Bearer ${inMemoryAccessToken}`;
   }
   return config;
 });

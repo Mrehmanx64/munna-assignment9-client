@@ -111,6 +111,13 @@ Rentora implements strict role-based access control across three user tiers:
 
 In development mode, developers can test each role using the non-production persona switcher or test registration shortcuts. In production, roles are strictly verified and enforced by backend JWT signatures and database authorization checks. Predictable demo credentials and automated account creation are disabled in production.
 
+### 🛡️ XSS Defense & Zero-localStorage JWT Architecture
+To protect against token exfiltration via Cross-Site Scripting (XSS), Rentora **never stores JWT tokens in `localStorage` or `sessionStorage`**:
+1. **Persistent Session Hydration**: Persistent authentication is maintained exclusively via secure `HttpOnly` cookies (`accessToken`) set by the backend upon login/registration.
+2. **In-Memory Non-Persistent State**: An in-memory access token (`inMemoryAccessToken`) is kept in active JavaScript memory for the life of the page turn only.
+3. **Session Hydration on Reload**: When the page reloads, Axios automatically dispatches `GET /api/auth/me` with `withCredentials: true`. The browser securely provides the `HttpOnly` cookie to restore authenticated user state.
+4. **Secure Logout**: Calling `logout()` notifies the backend to clear the `HttpOnly` cookie via `res.clearCookie()` and immediately nullifies all in-memory references.
+
 ---
 
 ## ⚙️ Environment Variables

@@ -21,6 +21,7 @@ import {
   ownerApi,
   normalizeUser,
   normalizeBooking,
+  setAccessToken,
 } from "@/lib/api";
 import { toast } from "sonner";
 
@@ -178,7 +179,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           refreshFavorites();
         }
       } catch {
-        // Token expired or unauthenticated; preserve local role/guest state
+        // Token expired or unauthenticated: ensure guest state
+        if (process.env.NODE_ENV === "production") {
+          setRegisteredUser(null);
+          setRoleState("guest");
+          if (typeof window !== "undefined") {
+            localStorage.removeItem("rentora_active_user");
+            localStorage.setItem("rentora_role", "guest");
+          }
+        }
       }
     };
 
@@ -255,8 +264,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         address: userData.address,
       });
 
-      if (res.data?.token && typeof window !== "undefined") {
-        localStorage.setItem("rentora_token", res.data.token);
+      if (res.data?.token) {
+        setAccessToken(res.data.token);
       }
       createdUser = normalizeUser(res.data?.user);
     } catch (err: any) {
@@ -297,8 +306,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const res = await authApi.login({ email, password: pass });
-      if (res.data?.token && typeof window !== "undefined") {
-        localStorage.setItem("rentora_token", res.data.token);
+      if (res.data?.token) {
+        setAccessToken(res.data.token);
       }
       userToUse = normalizeUser(res.data?.user);
     } catch {
@@ -335,11 +344,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // Ignore
     }
+    setAccessToken(null);
     setRegisteredUser(null);
     setRoleState("guest");
     setFavorites([]);
     try {
-      localStorage.removeItem("rentora_token");
       localStorage.removeItem("rentora_active_user");
       localStorage.setItem("rentora_role", "guest");
       localStorage.removeItem("rentora_favorites");
