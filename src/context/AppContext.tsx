@@ -527,15 +527,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setBookings((prev) => [normalizeBooking(result.booking), ...prev]);
       }
       toast.success("Booking initialized! Redirecting to secure Stripe Checkout...");
-    } catch {
-      // Local fallback
-      const newBooking: RentalBooking = {
-        ...bookingData,
-        id: `bk-${Date.now().toString().slice(-4)}`,
-        createdAt: new Date().toISOString().split("T")[0],
-      };
-      setBookings((prev) => [newBooking, ...prev]);
-      toast.success("Booking placed successfully! Owner notified.");
+    } catch (err: any) {
+      const errMsg =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Failed to initialize Stripe payment. Please check your reservation details.";
+      toast.error(errMsg);
+      throw new Error(errMsg);
     }
 
     return checkoutUrl;
