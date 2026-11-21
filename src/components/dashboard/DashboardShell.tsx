@@ -32,7 +32,7 @@ interface DashboardShellProps {
 export function DashboardShell({ children }: DashboardShellProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { currentUser, currentRole, setCurrentRole, logout, favorites, bookings } = useApp();
+  const { currentUser, currentRole, logout, favorites, bookings } = useApp();
 
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -241,40 +241,6 @@ export function DashboardShell({ children }: DashboardShellProps) {
 
           {/* Right Controls */}
           <div className="flex items-center gap-3">
-            {/* Live Role Switcher Pill (Dev only) or Role Badge (Prod) */}
-            {process.env.NODE_ENV !== "production" ? (
-              <div className="hidden sm:flex items-center text-xs bg-[#F7F6F1] border border-[#DCDBCF] rounded-full p-0.5">
-                <span className="px-2.5 py-1 text-[#6A726B] font-semibold text-[10px] uppercase tracking-wider">
-                  View:
-                </span>
-                {(["customer", "owner", "admin"] as const).map((r) => (
-                  <button
-                    key={r}
-                    onClick={() => {
-                      setCurrentRole(r);
-                      router.push(`/dashboard/${r}`);
-                    }}
-                    className={`px-2.5 py-0.5 rounded-full font-semibold transition-all capitalize text-[11px] cursor-pointer ${
-                      currentRole === r
-                        ? "bg-[#183C32] text-white shadow-2xs"
-                        : "text-[#555E57] hover:text-[#183C32]"
-                    }`}
-                  >
-                    {r}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="hidden sm:flex items-center text-xs bg-[#F7F6F1] border border-[#DCDBCF] rounded-full px-3 py-1">
-                <span className="text-[#6A726B] font-semibold text-[10px] uppercase tracking-wider mr-1.5">
-                  Clearance:
-                </span>
-                <span className="font-bold text-[#183C32] capitalize text-xs">
-                  {currentRole}
-                </span>
-              </div>
-            )}
-
             {/* Notifications Bell */}
             <div className="relative">
               <button
@@ -393,32 +359,6 @@ export function DashboardShell({ children }: DashboardShellProps) {
                 >
                   <X className="w-5 h-5" />
                 </button>
-              </div>
-
-              {/* Role Switcher in Drawer */}
-              <div className="my-4 p-3 bg-[#0E1E19] rounded-xs border border-[#1D3B31] space-y-2">
-                <span className="text-[10px] uppercase font-bold text-[#D99A42]">
-                  Switch Role
-                </span>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {(["customer", "owner", "admin"] as const).map((r) => (
-                    <button
-                      key={r}
-                      onClick={() => {
-                        setCurrentRole(r);
-                        setMobileSidebarOpen(false);
-                        router.push(`/dashboard/${r}`);
-                      }}
-                      className={`py-1 text-center text-xs font-semibold rounded-xs capitalize ${
-                        currentRole === r
-                          ? "bg-[#D99A42] text-[#11231D]"
-                          : "bg-[#18342B] text-white"
-                      }`}
-                    >
-                      {r}
-                    </button>
-                  ))}
-                </div>
               </div>
 
               {/* Drawer Links */}

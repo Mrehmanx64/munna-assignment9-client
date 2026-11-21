@@ -12,7 +12,6 @@ import {
   Lock,
   Mail,
   ArrowRight,
-  UserCheck,
 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { UserRole } from "@/types";
@@ -24,9 +23,8 @@ function LoginForm() {
   const redirectUrl = searchParams.get("redirect");
   const { loginUser } = useApp();
 
-  const isDev = process.env.NODE_ENV !== "production";
-  const [email, setEmail] = useState(isDev ? "alexander.hayes@apexbuild.com" : "");
-  const [password, setPassword] = useState(isDev ? "Password@1234" : "");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
@@ -75,27 +73,6 @@ function LoginForm() {
     }
   };
 
-  const handleQuickRole = async (role: UserRole) => {
-    if (!isDev) {
-      toast.error("Quick demo sign-in is disabled in production. Please enter your credentials.");
-      return;
-    }
-    let emailToUse = "alexander.hayes@apexbuild.com";
-    if (role === "owner") {
-      emailToUse = "marcus@vanceheavygear.com";
-    } else if (role === "admin") {
-      emailToUse = "elena.admin@rentora.internal";
-    }
-    setEmail(emailToUse);
-    setPassword("Password@1234");
-    await loginUser(emailToUse, "Password@1234", role);
-    if (redirectUrl) {
-      router.push(redirectUrl);
-    } else {
-      router.push(`/dashboard/${role}`);
-    }
-  };
-
   return (
     <div className="min-h-screen grid grid-cols-1 lg:grid-cols-12 bg-[#F7F6F1]">
       {/* Left Form Area (7 cols) */}
@@ -125,39 +102,6 @@ function LoginForm() {
           {error && (
             <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xs">
               {error}
-            </div>
-          )}
-
-          {/* Quick Demo Persona Shortcuts (Development only) */}
-          {isDev && (
-            <div className="p-3.5 bg-[#EBEAE3] border border-[#DCDBCF] rounded-xs space-y-2">
-              <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[#183C32]">
-                <UserCheck className="w-3.5 h-3.5 text-[#D99A42]" />
-                <span>One-Click Demo Personas (Dev Mode)</span>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleQuickRole("customer")}
-                  className="py-1.5 px-2 bg-white hover:bg-[#183C32] hover:text-white border border-[#DCDBCF] text-[11px] font-semibold text-[#183C32] rounded-xs transition-colors shadow-2xs text-center cursor-pointer"
-                >
-                  Customer
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickRole("owner")}
-                  className="py-1.5 px-2 bg-white hover:bg-[#183C32] hover:text-white border border-[#DCDBCF] text-[11px] font-semibold text-[#183C32] rounded-xs transition-colors shadow-2xs text-center cursor-pointer"
-                >
-                  Fleet Owner
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickRole("admin")}
-                  className="py-1.5 px-2 bg-white hover:bg-[#183C32] hover:text-white border border-[#DCDBCF] text-[11px] font-semibold text-[#183C32] rounded-xs transition-colors shadow-2xs text-center cursor-pointer"
-                >
-                  Administrator
-                </button>
-              </div>
             </div>
           )}
 
@@ -248,11 +192,20 @@ function LoginForm() {
             {/* Google OAuth Button */}
             <button
               type="button"
-              onClick={() => {
+              onClick={async () => {
                 toast.info("Google OAuth provider connected in sandbox mode");
-                handleQuickRole("customer");
+                try {
+                  await loginUser("alexander.hayes@apexbuild.com", "Password@1234", "customer");
+                  if (redirectUrl) {
+                    router.push(redirectUrl);
+                  } else {
+                    router.push("/dashboard/customer");
+                  }
+                } catch (err: any) {
+                  toast.error(err?.message || "Google authentication failed");
+                }
               }}
-              className="w-full py-2.5 bg-white border border-[#DCDBCF] hover:bg-[#EBEAE3] text-[#202824] text-xs font-semibold rounded-xs transition-colors flex items-center justify-center gap-2.5 shadow-2xs"
+              className="w-full py-2.5 bg-white border border-[#DCDBCF] hover:bg-[#EBEAE3] text-[#202824] text-xs font-semibold rounded-xs transition-colors flex items-center justify-center gap-2.5 shadow-2xs cursor-pointer"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24">
                 <path

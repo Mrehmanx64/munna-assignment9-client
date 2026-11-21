@@ -39,28 +39,6 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fillQuickDemo = (demoRole: UserRole) => {
-    if (demoRole === "customer") {
-      setFullName("Devin Vance");
-      setEmail(`devin.${Date.now().toString().slice(-4)}@apexrenter.com`);
-      setRole("customer");
-      setAvatarUrl("https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80");
-      setPassword("Pass@12345");
-      setConfirmPassword("Pass@12345");
-      setTermsAgreed(true);
-      setError(null);
-    } else {
-      setFullName("Valerie Sterling");
-      setEmail(`valerie.${Date.now().toString().slice(-4)}@sterlingheavy.com`);
-      setRole("owner");
-      setAvatarUrl("https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80");
-      setPassword("Pass@12345");
-      setConfirmPassword("Pass@12345");
-      setTermsAgreed(true);
-      setError(null);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -140,29 +118,6 @@ export default function RegisterPage() {
             <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xs flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{error}</span>
-            </div>
-          )}
-
-          {/* Quick Demo Autofill Bar for Instant Testing (Dev Mode only) */}
-          {process.env.NODE_ENV !== "production" && (
-            <div className="bg-[#EBEAE3] p-2.5 rounded-xs border border-[#DCDBCF] flex flex-col sm:flex-row items-center justify-between gap-2 text-xs">
-              <span className="text-[11px] font-semibold text-[#525B55]">Testing shortcuts:</span>
-              <div className="flex items-center gap-1.5 w-full sm:w-auto">
-                <button
-                  type="button"
-                  onClick={() => fillQuickDemo("customer")}
-                  className="flex-1 sm:flex-initial px-2.5 py-1 text-[11px] font-semibold bg-white border border-[#DCDBCF] hover:border-[#183C32] text-[#183C32] rounded-xs transition-colors cursor-pointer"
-                >
-                  Auto-fill Customer
-                </button>
-                <button
-                  type="button"
-                  onClick={() => fillQuickDemo("owner")}
-                  className="flex-1 sm:flex-initial px-2.5 py-1 text-[11px] font-semibold bg-white border border-[#DCDBCF] hover:border-[#183C32] text-[#183C32] rounded-xs transition-colors cursor-pointer"
-                >
-                  Auto-fill Owner
-                </button>
-              </div>
             </div>
           )}
 
