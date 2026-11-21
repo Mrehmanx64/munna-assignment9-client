@@ -89,18 +89,53 @@ Rentora features an integrated **Interactive Persona Switcher** embedded directl
 
 ## 💻 Tech Stack & Packages
 
-- **Framework**: Next.js 16.0.7 (App Router, Turbopack)
+- **Framework**: Next.js 16.0.7 (App Router, Webpack builder)
 - **Runtime**: React 19, TypeScript (strict mode)
+- **Data Fetching & State**: `@tanstack/react-query` v5 with centralized Axios client (`src/lib/api.ts`)
 - **Styling**: Tailwind CSS v4, tw-animate-css, shadcn/ui components
 - **Motion**: Framer Motion (subtle scroll reveals with `prefers-reduced-motion` compliance)
 - **Data Visualization**: Recharts (ResponsiveContainer, AreaChart, BarChart, PieChart)
 - **Icons**: Lucide React + custom inline brand SVGs
 - **Notifications**: Sonner toast system
-- **State Management**: React Context (`AppContext.tsx`) with optimistic local updates and persistent favorites/inventory
+- **State Management**: React Context (`AppContext.tsx`) with live backend authentication persistence, local storage fallback, and active persona switcher
 
 ---
 
-## 🚀 Running the Project
+## 🔐 Demo Credentials & Test Personas
+
+For ease of review, Rentora provides pre-configured credentials across all three platform roles:
+
+| Role | Email | Password | Access & Capabilities |
+|---|---|---|---|
+| **Platform Administrator** | `admin@rentora.com` | `Admin123!` | Safety audit approvals, escrow ledger, user role directory, platform-wide analytics. |
+| **Fleet Owner** | `owner@rentora.com` | `Owner123!` | Machinery creation (ImgBB), fleet inventory, rental dispatch, fleet revenue analytics. |
+| **Contractor / Customer** | `customer@rentora.com` | `Customer123!` | Catalog browsing, persistent favorites, escrow booking with Stripe Checkout, rental slips. |
+
+*(All three personas can also be loaded instantly via the persona chip shortcuts on `/login` and the top navigation switcher).*
+
+---
+
+## ⚙️ Environment Variables
+
+Create `.env.local` by copying `.env.example`:
+
+```bash
+cp .env.example .env.local
+```
+
+| Variable | Description | Example / Default |
+|---|---|---|
+| `NEXT_PUBLIC_APP_URL` | Frontend origin URL | `http://localhost:3000` |
+| `NEXT_PUBLIC_API_URL` | Backend Express API base endpoint | `http://localhost:5000/api` |
+| `NEXT_PUBLIC_SERVER_URL` | Backend root URL | `http://localhost:5000` |
+| `NEXT_PUBLIC_BETTER_AUTH_URL` | BetterAuth server endpoint | `http://localhost:5000` |
+| `NEXT_PUBLIC_GOOGLE_CLIENT_ID`| Google OAuth client ID for button | `your_google_client_id.apps.googleusercontent.com` |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe publishable key | `pk_test_placeholder_key` |
+| `NEXT_PUBLIC_IMGBB_API_KEY` | ImgBB image hosting API key | `your_imgbb_api_key_placeholder` |
+
+---
+
+## 🚀 Running Locally
 
 ```bash
 # Navigate to client directory
@@ -112,9 +147,26 @@ npm install
 # Start development server
 npm run dev
 
-# Run production build (verifies TypeScript, routing, and Turbopack asset bundling)
+# Run TypeScript typecheck without emitting files
+npx tsc --noEmit
+
+# Run production build (verifies TypeScript, routing, and asset bundling)
 npm run build
 
 # Run linting (0 errors, 0 warnings)
 npm run lint
 ```
+
+---
+
+## 🌐 Production Deployment (Vercel)
+
+Rentora's Next.js frontend is production-ready for deployment on **Vercel**:
+
+1. Import the Git repository in the Vercel dashboard.
+2. Select the `client` folder as the **Root Directory**.
+3. Framework preset: **Next.js**.
+4. Configure the Environment Variables listed in the table above:
+   - Point `NEXT_PUBLIC_API_URL` to your live backend (e.g. `https://rentora-api.onrender.com/api`).
+   - Point `NEXT_PUBLIC_APP_URL` to your Vercel deployment URL (e.g. `https://rentora-marketplace.vercel.app`).
+5. Deploy with automated build and edge preview capabilities.
