@@ -22,6 +22,14 @@ const nextConfig: NextConfig = {
       },
     },
   },
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        destination: "https://munna-assignment9-server.onrender.com/api/:path*",
+      },
+    ];
+  },
 };
 
 export default nextConfig;

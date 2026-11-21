@@ -1,8 +1,20 @@
 import axios, { AxiosError } from "axios";
 import { Equipment, RentalBooking, User, UserRole } from "@/types";
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+const getBaseUrl = (): string => {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL;
+  // If envUrl is missing, localhost in production, or accidentally points to frontend vercel domain,
+  // route directly to the live Render backend API
+  if (envUrl && !envUrl.includes("vercel.app") && !envUrl.includes("localhost")) {
+    return envUrl.endsWith("/api") ? envUrl : `${envUrl}/api`;
+  }
+  if (process.env.NODE_ENV === "development" && envUrl && envUrl.includes("localhost")) {
+    return envUrl;
+  }
+  return "https://munna-assignment9-server.onrender.com/api";
+};
+
+const API_BASE_URL = getBaseUrl();
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
