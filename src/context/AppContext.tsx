@@ -17,6 +17,7 @@ import {
   userApi,
   normalizeUser,
   normalizeBooking,
+  setAccessToken,
 } from "@/lib/api";
 import { toast } from "sonner";
 
@@ -144,11 +145,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     // 1. Initial equipment load
     refreshEquipment();
 
-    // 2. Validate current session with backend using HttpOnly cookie
+    // 2. Validate current session with backend using HttpOnly cookie or active session token
     const hydrateSession = async () => {
       try {
         const res = await authApi.getMe();
         const rawUser = res.data?.user || res.data?.data?.user || res.data?.data || res.data;
+        const token = res.data?.token || res.data?.data?.token;
+        if (token) {
+          setAccessToken(token);
+        }
         if (rawUser && (rawUser.id || rawUser._id || rawUser.email)) {
           const user = normalizeUser(rawUser);
           setRegisteredUser(user);
@@ -157,11 +162,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         } else {
           setRegisteredUser(null);
           setRoleState("guest");
+          setAccessToken(null);
         }
       } catch {
         // Expired or unauthenticated: set strictly to guest
         setRegisteredUser(null);
         setRoleState("guest");
+        setAccessToken(null);
       } finally {
         setIsAuthResolving(false);
       }
@@ -223,6 +230,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       });
 
       const rawUser = res.data?.user || res.data?.data?.user || res.data?.data;
+      const token = res.data?.token || res.data?.data?.token;
+      if (token) {
+        setAccessToken(token);
+      }
       if (!rawUser) {
         throw new Error("Invalid registration response from server");
       }
@@ -250,6 +261,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       const res = await authApi.login({ email, password });
       const rawUser = res.data?.user || res.data?.data?.user || res.data?.data;
+      const token = res.data?.token || res.data?.data?.token;
+      if (token) {
+        setAccessToken(token);
+      }
       if (!rawUser) {
         throw new Error("Invalid authentication credentials");
       }
@@ -271,6 +286,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       const res = await authApi.googleAuth({ idToken });
       const rawUser = res.data?.user || res.data?.data?.user || res.data?.data;
+      const token = res.data?.token || res.data?.data?.token;
+      if (token) {
+        setAccessToken(token);
+      }
       if (!rawUser) {
         throw new Error("Google authentication failed to retrieve user profile");
       }
@@ -294,6 +313,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // Ignore network failure on logout
     }
+    setAccessToken(null);
     setRegisteredUser(null);
     setRoleState("guest");
     setFavorites([]);

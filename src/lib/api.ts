@@ -25,11 +25,12 @@ export const api = axios.create({
   timeout: 15000,
 });
 
-// In-memory token holder only (Never persist tokens in localStorage or sessionStorage)
+// In-memory token holder with sessionStorage tab persistence (preserves session across page reloads in the active tab)
 let inMemoryAccessToken: string | null = null;
 if (typeof window !== "undefined") {
   try {
-    // Purge any legacy tokens stored in localStorage to enforce strict HttpOnly cookie authentication
+    inMemoryAccessToken = sessionStorage.getItem("rentora_session_token");
+    // Ensure clean separation from legacy permanent localStorage tokens
     localStorage.removeItem("rentora_access_token");
   } catch {
     // Ignore
@@ -38,10 +39,29 @@ if (typeof window !== "undefined") {
 
 export const setAccessToken = (token: string | null): void => {
   inMemoryAccessToken = token;
+  if (typeof window !== "undefined") {
+    try {
+      if (token) {
+        sessionStorage.setItem("rentora_session_token", token);
+      } else {
+        sessionStorage.removeItem("rentora_session_token");
+      }
+    } catch {
+      // Ignore
+    }
+  }
 };
 
 export const getAccessToken = (): string | null => {
-  return inMemoryAccessToken;
+  if (inMemoryAccessToken) return inMemoryAccessToken;
+  if (typeof window !== "undefined") {
+    try {
+      return sessionStorage.getItem("rentora_session_token");
+    } catch {
+      return null;
+    }
+  }
+  return null;
 };
 
 // Attach access token if present during active session
