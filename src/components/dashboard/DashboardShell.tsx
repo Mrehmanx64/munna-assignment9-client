@@ -426,13 +426,13 @@ export function DashboardShell({ children }: DashboardShellProps) {
                             ) : req.status === "approved" ? (
                               <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-xs bg-green-50 text-green-800 border border-green-200 text-[10px] font-bold">
                                 <Check className="w-3 h-3 text-green-600" />
-                                <span>Approved by Admin {req.reviewedByName || "Marcus"}</span>
+                                <span>Approved by Admin {req.reviewedByName || "Admin"}</span>
                               </div>
-                            ) : (
+                            ) : req.status === "rejected" ? (
                               <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-xs bg-red-50 text-red-800 border border-red-200 text-[10px] font-bold">
                                 <span>Rejected by Admin {req.reviewedByName || "Admin"}</span>
                               </div>
-                            )}
+                            ) : null}
                           </div>
                         ))
                       )}
