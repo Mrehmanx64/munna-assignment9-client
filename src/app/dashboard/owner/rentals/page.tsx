@@ -14,26 +14,18 @@ import { BookingStatus, PaymentStatus, RentalBooking } from "@/types";
 import { ownerApi } from "@/lib/api";
 
 export default function OwnerRentalsPage() {
-  const { bookings: contextBookings, updateBookingStatus, updatePaymentStatus } = useApp();
+  const { updateBookingStatus } = useApp();
   const [filter, setFilter] = useState<string>("all");
   const [search, setSearch] = useState<string>("");
 
-  // Query live owner bookings
+  // Query live owner bookings from backend
   const { data, isLoading } = useQuery({
     queryKey: ["owner-bookings"],
     queryFn: () => ownerApi.getBookings(),
     staleTime: 30000,
   });
 
-  const liveBookings: RentalBooking[] = data?.bookings || [];
-  const mergedMap = new Map<string, RentalBooking>();
-  for (const b of [...liveBookings, ...contextBookings]) {
-    if (b && b.id && !mergedMap.has(b.id)) {
-      mergedMap.set(b.id, b);
-    }
-  }
-
-  const allBookings = Array.from(mergedMap.values());
+  const allBookings: RentalBooking[] = data?.bookings || [];
 
   const filtered = allBookings.filter((b) => {
     if (filter !== "all" && b.bookingStatus !== filter) return false;
@@ -150,17 +142,17 @@ export default function OwnerRentalsPage() {
                     </td>
 
                     <td className="py-3.5 px-4">
-                      <select
-                        value={b.paymentStatus}
-                        onChange={(e) =>
-                          updatePaymentStatus(b.id, e.target.value as PaymentStatus)
-                        }
-                        className="text-[11px] font-bold px-2 py-1 rounded-xs bg-[#F7F6F1] border border-[#DCDBCF] text-[#183C32] cursor-pointer"
+                      <span
+                        className={`inline-block px-2 py-0.5 rounded-xs text-[10px] font-bold uppercase tracking-wider ${
+                          b.paymentStatus === "paid"
+                            ? "bg-green-50 text-green-800 border border-green-200"
+                            : b.paymentStatus === "refunded"
+                            ? "bg-purple-50 text-purple-800 border border-purple-200"
+                            : "bg-amber-50 text-amber-800 border border-amber-200"
+                        }`}
                       >
-                        <option value="paid">Paid (Escrow)</option>
-                        <option value="pending">Pending</option>
-                        <option value="refunded">Refunded</option>
-                      </select>
+                        {b.paymentStatus === "paid" ? "Paid (Escrow)" : b.paymentStatus}
+                      </span>
                     </td>
 
                     <td className="py-3.5 px-4">

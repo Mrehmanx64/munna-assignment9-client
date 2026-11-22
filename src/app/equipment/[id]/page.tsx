@@ -34,34 +34,49 @@ export default function EquipmentDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const id = params?.id as string;
-  const { currentUser, currentRole, equipmentList, isFavorite, toggleFavorite } = useApp();
+  const { currentUser, currentRole, isAuthResolving, equipmentList, isFavorite, toggleFavorite } = useApp();
 
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
+
+  // Protected equipment view requirement: Require authentication
+  React.useEffect(() => {
+    if (isAuthResolving) return;
+    if (!currentUser || currentRole === "guest") {
+      toast.info("Please sign in to view equipment specifications and rental telemetry.");
+      router.replace(`/login?redirect=${encodeURIComponent(`/equipment/${id}`)}`);
+    }
+  }, [currentUser, currentRole, isAuthResolving, id, router]);
 
   // Fetch real equipment from backend API via TanStack Query
   const { data: serverEquipment, isLoading } = useQuery({
     queryKey: ["equipmentDetails", id],
     queryFn: () => equipmentApi.getById(id),
-    enabled: !!id,
+    enabled: !!id && !isAuthResolving && !!currentUser,
     staleTime: 60000,
   });
 
   const equipment =
     serverEquipment && serverEquipment.id
       ? serverEquipment
-      : equipmentList.find((e) => e.id === id) || equipmentList[0];
+      : equipmentList.find((e) => e.id === id) || null;
 
-  const favorited = isFavorite(equipment?.id);
+  const favorited = equipment?.id ? isFavorite(equipment.id) : false;
 
   // Related equipment from same category (excluding current)
-  const relatedEquipment = equipmentList
-    .filter((e) => e.category === equipment?.category && e.id !== equipment?.id)
-    .slice(0, 3);
+  const relatedEquipment = equipment
+    ? equipmentList
+        .filter((e) => e.category === equipment.category && e.id !== equipment.id)
+        .slice(0, 3)
+    : [];
 
   const handleBookClick = () => {
     if (!currentUser || currentRole === "guest") {
       toast.info("Please sign in with a contractor customer account to book machinery");
       router.push(`/login?redirect=/equipment/${id}`);
+      return;
+    }
+    if (!equipment) {
+      toast.error("Equipment details are currently unavailable.");
       return;
     }
     if (equipment.status !== "active") {
@@ -77,10 +92,12 @@ export default function EquipmentDetailsPage() {
       router.push(`/login?redirect=/equipment/${id}`);
       return;
     }
-    toggleFavorite(equipment.id);
+    if (equipment?.id) {
+      toggleFavorite(equipment.id);
+    }
   };
 
-  if (isLoading && !equipment) {
+  if ((isLoading || isAuthResolving) && !equipment) {
     return (
       <div className="min-h-screen flex flex-col bg-[#F7F6F1]">
         <Navbar />

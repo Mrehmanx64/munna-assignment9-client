@@ -16,28 +16,44 @@ import { useApp } from "@/context/AppContext";
 import { toast } from "sonner";
 
 export function ProfileForm() {
-  const { currentUser, currentRole } = useApp();
+  const { currentUser, currentRole, updateProfile } = useApp();
 
-  const [name, setName] = useState(currentUser?.name || "Alexander Hayes");
-  const [email, setEmail] = useState(currentUser?.email || "alexander.hayes@apexbuild.com");
-  const [phone, setPhone] = useState(currentUser?.phone || "+1 (555) 234-5678");
-  const [address, setAddress] = useState(
-    currentUser?.address || "742 Montgomery St, San Francisco, CA 94111"
-  );
+  const [name, setName] = useState(currentUser?.name || "");
+  const [email, setEmail] = useState(currentUser?.email || "");
+  const [phone, setPhone] = useState(currentUser?.phone || "");
+  const [address, setAddress] = useState(currentUser?.address || "");
   const [avatarUrl, setAvatarUrl] = useState(
     currentUser?.avatarUrl ||
       "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80"
   );
   const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = (e: React.FormEvent) => {
+  React.useEffect(() => {
+    if (currentUser) {
+      setName(currentUser.name || "");
+      setEmail(currentUser.email || "");
+      setPhone(currentUser.phone || "");
+      setAddress(currentUser.address || "");
+      if (currentUser.avatarUrl) setAvatarUrl(currentUser.avatarUrl);
+    }
+  }, [currentUser]);
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
 
-    setTimeout(() => {
+    try {
+      await updateProfile({
+        name,
+        phone,
+        address,
+        avatarUrl,
+      });
+    } catch {
+      // Handled in context
+    } finally {
       setIsSaving(false);
-      toast.success("Profile credentials updated successfully!");
-    }, 600);
+    }
   };
 
   return (

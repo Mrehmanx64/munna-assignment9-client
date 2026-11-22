@@ -103,63 +103,13 @@ export function useEquipmentFilter(
     staleTime: 30000,
   });
 
-  // Client-side fallback if server returns empty or during initial render
-  const localFilteredFallback = useMemo(() => {
-    return fallbackEquipmentList
-      .filter((eq) => {
-        if (criteria.search.trim()) {
-          const q = criteria.search.toLowerCase();
-          const matchTitle = eq.title.toLowerCase().includes(q);
-          const matchBrand = eq.brand.toLowerCase().includes(q);
-          const matchModel = eq.model.toLowerCase().includes(q);
-          if (!matchTitle && !matchBrand && !matchModel) return false;
-        }
-
-        if (criteria.category !== "All" && eq.category !== criteria.category) {
-          return false;
-        }
-
-        if (criteria.location.trim()) {
-          const loc = criteria.location.toLowerCase();
-          if (!eq.location.toLowerCase().includes(loc)) return false;
-        }
-
-        if (criteria.rentalType !== "all" && eq.rentalType !== criteria.rentalType) {
-          return false;
-        }
-
-        if (eq.rentalPrice > criteria.maxPrice) {
-          return false;
-        }
-
-        if (criteria.inStockOnly && eq.availableQuantity < 1) {
-          return false;
-        }
-
-        if (criteria.verifiedOnly && !eq.ownerVerified) {
-          return false;
-        }
-
-        return true;
-      })
-      .sort((a, b) => {
-        if (criteria.sortBy === "price-low") return a.rentalPrice - b.rentalPrice;
-        if (criteria.sortBy === "price-high") return b.rentalPrice - a.rentalPrice;
-        if (criteria.sortBy === "rating") return b.rating - a.rating;
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      });
-  }, [fallbackEquipmentList, criteria]);
-
+  // Return server equipment or empty array if loading / no items
   const filteredEquipment = useMemo<Equipment[]>(() => {
-    if (serverData && serverData.equipment && serverData.equipment.length > 0) {
+    if (serverData && Array.isArray(serverData.equipment)) {
       return serverData.equipment;
     }
-    if (serverData && serverData.equipment && serverData.equipment.length === 0 && !isError) {
-      // Server returned 0 matching records for current filters
-      return [];
-    }
-    return localFilteredFallback;
-  }, [serverData, isError, localFilteredFallback]);
+    return [];
+  }, [serverData]);
 
   // Active filters count
   const activeFiltersCount = useMemo(() => {

@@ -9,12 +9,10 @@ import {
   Loader2,
   PackageOpen,
 } from "lucide-react";
-import { useApp } from "@/context/AppContext";
 import { RentalBooking } from "@/types";
 import { adminApi } from "@/lib/api";
 
 export default function AdminAllRentalsPage() {
-  const { bookings: contextBookings } = useApp();
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
 
@@ -25,15 +23,7 @@ export default function AdminAllRentalsPage() {
     staleTime: 30000,
   });
 
-  const liveBookings: RentalBooking[] = data?.bookings || [];
-  const mergedMap = new Map<string, RentalBooking>();
-  for (const b of [...liveBookings, ...contextBookings]) {
-    if (b && b.id && !mergedMap.has(b.id)) {
-      mergedMap.set(b.id, b);
-    }
-  }
-
-  const allBookings = Array.from(mergedMap.values());
+  const allBookings: RentalBooking[] = data?.bookings || [];
 
   const filtered = allBookings.filter((b) => {
     if (statusFilter !== "all" && b.bookingStatus !== statusFilter) return false;

@@ -26,7 +26,6 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { useApp } from "@/context/AppContext";
-import { MOCK_OWNER_STATS } from "@/data/mockData";
 import { ownerApi } from "@/lib/api";
 
 export default function OwnerOverviewPage() {
@@ -54,28 +53,46 @@ export default function OwnerOverviewPage() {
     overview?.pendingListings ??
     myEquipment.filter((e) => e.status === "pending").length;
   const totalFleetCount = overview?.totalEquipment ?? myEquipment.length;
-  const totalCompleted = overview?.completedRentals ?? 46;
-  const totalEarnings = overview?.totalEarnings ?? MOCK_OWNER_STATS.totalEarnings;
+  const totalCompleted = overview?.completedRentals ?? 0;
+  const totalEarnings = overview?.totalEarnings ?? 0;
 
-  // Compute monthly earnings: from real data if available, else mock
+  // Compute monthly earnings: from real data if available, else 0
   const latestMonthEarnings =
     monthlyData && monthlyData.length > 0
       ? monthlyData[monthlyData.length - 1].earnings
-      : MOCK_OWNER_STATS.monthlyEarnings;
+      : 0;
 
+  const defaultMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
   const chartData =
-    monthlyData && monthlyData.length > 0 && monthlyData.some((m: any) => m.earnings > 0)
+    monthlyData && monthlyData.length > 0
       ? monthlyData.map((m: any) => ({
           month: m.month,
-          earnings: m.earnings,
-          rentals: m.rentalsCount,
+          earnings: m.earnings || 0,
+          rentals: m.rentalsCount || 0,
         }))
-      : MOCK_OWNER_STATS.monthlyChart;
+      : defaultMonths.map((month) => ({ month, earnings: 0, rentals: 0 }));
 
-  const utilizationData = MOCK_OWNER_STATS.categoryBreakdown.map((item) => ({
-    category: item.name.split(" ")[0],
-    rate: Math.min(100, Math.round((item.value / 40000) * 100)),
-  }));
+  const categoryCounts: Record<string, { total: number; available: number }> = {};
+  for (const eq of myEquipment) {
+    const cat = (eq.category || "General").split(" ")[0];
+    if (!categoryCounts[cat]) categoryCounts[cat] = { total: 0, available: 0 };
+    categoryCounts[cat].total += eq.totalQuantity || 1;
+    categoryCounts[cat].available += eq.availableQuantity || 0;
+  }
+
+  const categoryEntries = Object.entries(categoryCounts);
+  const utilizationData =
+    categoryEntries.length > 0
+      ? categoryEntries.map(([cat, counts]) => ({
+          category: cat,
+          rate: counts.total > 0 ? Math.round(((counts.total - counts.available) / counts.total) * 100) : 0,
+        }))
+      : [
+          { category: "Construction", rate: 0 },
+          { category: "Vehicles", rate: 0 },
+          { category: "Photography", rate: 0 },
+          { category: "Agriculture", rate: 0 },
+        ];
 
   return (
     <div className="space-y-8">

@@ -20,7 +20,7 @@ import { adminApi } from "@/lib/api";
 
 export default function AdminEquipmentPage() {
   const queryClient = useQueryClient();
-  const { equipmentList: contextList, updateEquipmentStatus, deleteEquipment } = useApp();
+  const { updateEquipmentStatus, deleteEquipment } = useApp();
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
 
@@ -31,15 +31,7 @@ export default function AdminEquipmentPage() {
     staleTime: 30000,
   });
 
-  const liveList: Equipment[] = data?.equipment || [];
-  const mergedMap = new Map<string, Equipment>();
-  for (const eq of [...liveList, ...contextList]) {
-    if (eq && eq.id && !mergedMap.has(eq.id)) {
-      mergedMap.set(eq.id, eq);
-    }
-  }
-
-  const equipmentList = Array.from(mergedMap.values());
+  const equipmentList: Equipment[] = data?.equipment || [];
 
   const filtered = equipmentList.filter((eq) => {
     if (statusFilter !== "all" && eq.status !== statusFilter) return false;

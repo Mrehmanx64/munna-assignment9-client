@@ -12,32 +12,78 @@ import {
   PackageOpen,
   Eye,
   Loader2,
+  Pencil,
+  X,
+  CheckCircle2,
 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
-import { Equipment, EquipmentStatus } from "@/types";
+import { Equipment } from "@/types";
 import { ownerApi } from "@/lib/api";
 
 export default function MyEquipmentListPage() {
-  const { equipmentList: contextEquipment, deleteEquipment, updateEquipmentStatus } = useApp();
+  const { deleteEquipment, updateEquipment } = useApp();
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
+  const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(null);
+  const [editForm, setEditForm] = useState<{
+    title: string;
+    rentalPrice: number;
+    rentalType: string;
+    availableQuantity: number;
+    totalQuantity: number;
+    condition: string;
+  }>({
+    title: "",
+    rentalPrice: 0,
+    rentalType: "daily",
+    availableQuantity: 1,
+    totalQuantity: 1,
+    condition: "Good",
+  });
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Query live owner equipment
-  const { data, isLoading } = useQuery({
+  // Query live owner equipment from backend
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ["owner-equipment"],
     queryFn: () => ownerApi.getEquipment(),
     staleTime: 30000,
   });
 
-  const liveList: Equipment[] = data?.equipment || [];
-  const mergedMap = new Map<string, Equipment>();
-  for (const eq of [...liveList, ...contextEquipment]) {
-    if (eq && eq.id && !mergedMap.has(eq.id)) {
-      mergedMap.set(eq.id, eq);
-    }
-  }
+  const equipmentList: Equipment[] = data?.equipment || [];
 
-  const equipmentList = Array.from(mergedMap.values());
+  const handleOpenEdit = (eq: Equipment) => {
+    setEditingEquipment(eq);
+    setEditForm({
+      title: eq.title,
+      rentalPrice: eq.rentalPrice,
+      rentalType: eq.rentalType || "daily",
+      availableQuantity: eq.availableQuantity,
+      totalQuantity: eq.totalQuantity,
+      condition: eq.condition || "Good",
+    });
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingEquipment) return;
+    setIsSaving(true);
+    try {
+      await updateEquipment(editingEquipment.id, {
+        title: editForm.title,
+        rentalPrice: Number(editForm.rentalPrice),
+        rentalType: editForm.rentalType as any,
+        availableQuantity: Number(editForm.availableQuantity),
+        totalQuantity: Number(editForm.totalQuantity),
+        condition: editForm.condition as any,
+      });
+      await refetch();
+      setEditingEquipment(null);
+    } catch {
+      // error handled in updateEquipment toast
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const filtered = equipmentList.filter((eq) => {
     if (categoryFilter !== "All" && eq.category !== categoryFilter) return false;
@@ -182,26 +228,27 @@ export default function MyEquipmentListPage() {
                       {eq.availableQuantity} of {eq.totalQuantity} units
                     </td>
 
-                    {/* Status with interactive switcher */}
+                    {/* Status read-only badge */}
                     <td className="py-3.5 px-4">
-                      <select
-                        value={eq.status}
-                        onChange={(e) =>
-                          updateEquipmentStatus(eq.id, e.target.value as EquipmentStatus)
-                        }
-                        className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-xs border cursor-pointer ${
+                      <span
+                        className={`inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-xs border ${
                           eq.status === "active"
                             ? "bg-green-50 text-green-800 border-green-200"
                             : eq.status === "pending"
                             ? "bg-amber-50 text-amber-800 border-amber-200"
+                            : eq.status === "maintenance"
+                            ? "bg-blue-50 text-blue-800 border-blue-200"
                             : "bg-gray-100 text-gray-800 border-gray-300"
                         }`}
                       >
-                        <option value="active">Active (Live)</option>
-                        <option value="pending">Pending Audit</option>
-                        <option value="maintenance">Maintenance</option>
-                        <option value="rejected">Inactive</option>
-                      </select>
+                        {eq.status === "active"
+                          ? "Active (Live)"
+                          : eq.status === "pending"
+                          ? "Pending Audit"
+                          : eq.status === "maintenance"
+                          ? "Maintenance"
+                          : "Inactive"}
+                      </span>
                     </td>
 
                     {/* Actions */}
@@ -216,9 +263,18 @@ export default function MyEquipmentListPage() {
                         </Link>
 
                         <button
-                          onClick={() => {
+                          onClick={() => handleOpenEdit(eq)}
+                          className="p-1.5 rounded-xs text-[#183C32] hover:bg-[#EBEAE3] transition-colors cursor-pointer"
+                          title="Edit listing details"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+
+                        <button
+                          onClick={async () => {
                             if (confirm(`Are you sure you want to delete ${eq.title}?`)) {
-                              deleteEquipment(eq.id);
+                              await deleteEquipment(eq.id);
+                              await refetch();
                             }
                           }}
                           className="p-1.5 rounded-xs text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
@@ -251,6 +307,150 @@ export default function MyEquipmentListPage() {
           >
             Add New Machinery
           </Link>
+        </div>
+      )}
+
+      {/* Edit Equipment Modal */}
+      {editingEquipment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-sm border border-[#E5E4DC] shadow-xl max-w-lg w-full p-6 space-y-4 animate-in fade-in zoom-in duration-150">
+            <div className="flex items-center justify-between border-b border-[#E5E4DC] pb-3">
+              <div>
+                <h3 className="font-heading font-bold text-lg text-[#183C32]">
+                  Edit Equipment Listing
+                </h3>
+                <p className="text-xs text-[#6A726B]">
+                  Update machinery details and rental parameters.
+                </p>
+              </div>
+              <button
+                onClick={() => setEditingEquipment(null)}
+                className="p-1 rounded-xs hover:bg-[#EBEAE3] text-[#6A726B]"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEdit} className="space-y-4 text-xs">
+              <div className="bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-xs text-[11px] leading-relaxed">
+                <strong>Notice:</strong> Material updates to pricing, inventory, or specs will reset this listing to <em>Pending Audit</em> status for administrative verification.
+              </div>
+
+              <div>
+                <label className="block font-semibold text-[#202824] mb-1">
+                  Title / Equipment Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editForm.title}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, title: e.target.value }))}
+                  className="w-full px-3 py-2 border border-[#E0DFD6] rounded-xs bg-[#F7F6F1] text-[#202824] focus:outline-hidden focus:border-[#183C32]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-[#202824] mb-1">
+                    Rental Price ($)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={editForm.rentalPrice}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, rentalPrice: Number(e.target.value) }))}
+                    className="w-full px-3 py-2 border border-[#E0DFD6] rounded-xs bg-[#F7F6F1] text-[#202824] focus:outline-hidden focus:border-[#183C32]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-[#202824] mb-1">
+                    Rental Frequency
+                  </label>
+                  <select
+                    value={editForm.rentalType}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, rentalType: e.target.value }))}
+                    className="w-full px-3 py-2 border border-[#E0DFD6] rounded-xs bg-[#F7F6F1] text-[#202824] focus:outline-hidden focus:border-[#183C32]"
+                  >
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-[#202824] mb-1">
+                    Available Units
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    required
+                    value={editForm.availableQuantity}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, availableQuantity: Number(e.target.value) }))}
+                    className="w-full px-3 py-2 border border-[#E0DFD6] rounded-xs bg-[#F7F6F1] text-[#202824] focus:outline-hidden focus:border-[#183C32]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-[#202824] mb-1">
+                    Total Fleet Units
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={editForm.totalQuantity}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, totalQuantity: Number(e.target.value) }))}
+                    className="w-full px-3 py-2 border border-[#E0DFD6] rounded-xs bg-[#F7F6F1] text-[#202824] focus:outline-hidden focus:border-[#183C32]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-[#202824] mb-1">
+                  Condition Rating
+                </label>
+                <select
+                  value={editForm.condition}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, condition: e.target.value }))}
+                  className="w-full px-3 py-2 border border-[#E0DFD6] rounded-xs bg-[#F7F6F1] text-[#202824] focus:outline-hidden focus:border-[#183C32]"
+                >
+                  <option value="Like New">Like New</option>
+                  <option value="Excellent">Excellent</option>
+                  <option value="Good">Good</option>
+                  <option value="Fair">Fair</option>
+                </select>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#E5E4DC]">
+                <button
+                  type="button"
+                  onClick={() => setEditingEquipment(null)}
+                  className="px-4 py-2 border border-[#E0DFD6] rounded-xs font-semibold text-[#4A544E] hover:bg-[#EBEAE3] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="px-4 py-2 bg-[#183C32] hover:bg-[#245344] text-white font-bold rounded-xs transition-colors flex items-center gap-2 disabled:opacity-50"
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <span>Update Listing</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

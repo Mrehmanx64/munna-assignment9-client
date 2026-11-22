@@ -27,7 +27,6 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { MOCK_ADMIN_STATS } from "@/data/mockData";
 import { useApp } from "@/context/AppContext";
 import { adminApi } from "@/lib/api";
 
@@ -53,24 +52,46 @@ export default function AdminOverviewPage() {
     equipmentList.filter((e) => e.status === "pending").length ??
     0;
 
-  const totalUsers = overview?.totalUsers ?? MOCK_ADMIN_STATS.totalUsers;
+  const totalUsers = overview?.totalUsers ?? 0;
   const totalEquipment = overview?.totalEquipment ?? equipmentList.length;
   const activeFleetCount =
     overview?.approvedEquipment ??
     equipmentList.filter((e) => e.status === "active").length;
-  const totalBookings = overview?.totalBookings ?? MOCK_ADMIN_STATS.totalBookings;
-  const completedRentals = overview?.completedRentals ?? MOCK_ADMIN_STATS.completedRentals;
-  const totalRevenue = overview?.totalRevenue ?? MOCK_ADMIN_STATS.totalRevenue;
+  const totalBookings = overview?.totalBookings ?? 0;
+  const completedRentals = overview?.completedRentals ?? 0;
+  const totalRevenue = overview?.totalRevenue ?? 0;
 
-  // Chart data: prioritize real backend monthly data if available with values, else smooth fallback
+  // Chart data: prioritize real backend monthly data if available, else zero-filled months
+  const defaultMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
   const chartData =
-    monthlyData && monthlyData.length > 0 && monthlyData.some((m: any) => m.revenue > 0)
+    monthlyData && monthlyData.length > 0
       ? monthlyData.map((m: any) => ({
           month: m.month,
-          revenue: m.revenue,
-          bookings: m.bookingsCount,
+          revenue: m.revenue || 0,
+          bookings: m.bookingsCount || 0,
         }))
-      : MOCK_ADMIN_STATS.monthlyVolume;
+      : defaultMonths.map((m) => ({ month: m, revenue: 0, bookings: 0 }));
+
+  // Dynamic category distribution computed from live catalog
+  const catMap: Record<string, number> = {};
+  for (const eq of equipmentList) {
+    const cat = eq.category || "General";
+    catMap[cat] = (catMap[cat] || 0) + 1;
+  }
+  const totalItems = equipmentList.length;
+  const categoryDistribution =
+    totalItems > 0
+      ? Object.entries(catMap).map(([name, count]) => ({
+          name,
+          percentage: Math.round((count / totalItems) * 100),
+          count,
+        }))
+      : [
+          { name: "Construction Equipment", percentage: 0, count: 0 },
+          { name: "Vehicles & Transportation", percentage: 0, count: 0 },
+          { name: "Photography Equipment", percentage: 0, count: 0 },
+          { name: "Agriculture Equipment", percentage: 0, count: 0 },
+        ];
 
   const COLORS = ["#183C32", "#D99A42", "#2E6B4F", "#8B5E3C", "#555E57", "#3B82F6"];
 
@@ -274,7 +295,7 @@ export default function AdminOverviewPage() {
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={MOCK_ADMIN_STATS.categoryDistribution}
+                  data={categoryDistribution}
                   dataKey="percentage"
                   nameKey="name"
                   cx="50%"
@@ -283,7 +304,7 @@ export default function AdminOverviewPage() {
                   innerRadius={45}
                   paddingAngle={3}
                 >
-                  {MOCK_ADMIN_STATS.categoryDistribution.map((entry, index) => (
+                  {categoryDistribution.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
@@ -303,7 +324,7 @@ export default function AdminOverviewPage() {
 
           {/* Legend Grid */}
           <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
-            {MOCK_ADMIN_STATS.categoryDistribution.map((item, idx) => (
+            {categoryDistribution.map((item, idx) => (
               <div key={item.name} className="flex items-center gap-1.5">
                 <span
                   className="w-2.5 h-2.5 rounded-2xs shrink-0"

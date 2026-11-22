@@ -18,32 +18,24 @@ import { favoriteApi } from "@/lib/api";
 import { Equipment } from "@/types";
 
 export default function CustomerFavoritesPage() {
-  const { favorites, toggleFavorite, equipmentList } = useApp();
+  const { toggleFavorite } = useApp();
 
   // Fetch real backend favorites
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ["customer-favorites"],
     queryFn: () => favoriteApi.getFavorites(),
     staleTime: 30000,
   });
 
   // Extract equipment from backend favorites
-  const backendEquipment: Equipment[] = (data?.favorites || [])
+  const savedEquipment: Equipment[] = (data?.favorites || [])
     .map((fav: any) => fav.equipment)
     .filter(Boolean);
 
-  // Combine with locally saved favorites if not already present
-  const localEquipment = equipmentList.filter((eq) => favorites.includes(eq.id));
-
-  // Merge uniquely by equipment ID
-  const equipmentMap = new Map<string, Equipment>();
-  for (const eq of [...backendEquipment, ...localEquipment]) {
-    if (eq && eq.id && !equipmentMap.has(eq.id)) {
-      equipmentMap.set(eq.id, eq);
-    }
-  }
-
-  const savedEquipment = Array.from(equipmentMap.values());
+  const handleToggle = async (equipmentId: string) => {
+    await toggleFavorite(equipmentId);
+    await refetch();
+  };
 
   return (
     <div className="space-y-6">
@@ -109,7 +101,7 @@ export default function CustomerFavoritesPage() {
                     </span>
                   </div>
                   <button
-                    onClick={() => toggleFavorite(equipment.id)}
+                    onClick={() => handleToggle(equipment.id)}
                     className="absolute top-3 right-3 p-1.5 rounded-full bg-white/90 text-red-600 hover:bg-white shadow-xs transition-colors cursor-pointer"
                     title="Remove from favorites"
                   >
@@ -156,7 +148,7 @@ export default function CustomerFavoritesPage() {
 
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => toggleFavorite(equipment.id)}
+                    onClick={() => handleToggle(equipment.id)}
                     className="px-2.5 py-1.5 text-xs text-[#8A948D] hover:text-red-700 font-semibold cursor-pointer"
                   >
                     Remove
