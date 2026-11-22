@@ -42,37 +42,12 @@ export default function CustomerRentalsPage() {
 
       if (status === "success") {
         if (sessionId && sessionId !== "{CHECKOUT_SESSION_ID}") {
-          setVerifyingSession(true);
-          paymentApi
-            .verifySession(sessionId)
-            .then(() => {
-              toast.success("Payment verified! Your machinery reservation is confirmed and active.");
-              queryClient.invalidateQueries({ queryKey: ["customer-rentals"] });
-              refreshBookings();
-            })
-            .catch((err) => {
-              const errMsg =
-                err?.response?.data?.message || "Payment verification failed or is pending webhook confirmation.";
-              toast.error(errMsg);
-              queryClient.invalidateQueries({ queryKey: ["customer-rentals"] });
-              refreshBookings();
-            })
-            .finally(() => {
-              setVerifyingSession(false);
-              const cleanUrl = window.location.pathname;
-              window.history.replaceState({}, document.title, cleanUrl);
-            });
-        } else {
-          toast.info("Payment session completed. Awaiting backend verification.");
-          queryClient.invalidateQueries({ queryKey: ["customer-rentals"] });
-          refreshBookings();
-          const cleanUrl = window.location.pathname;
-          window.history.replaceState({}, document.title, cleanUrl);
+          window.location.href = `/payment/success?session_id=${sessionId}`;
+          return;
         }
-      } else if (status === "cancel") {
-        toast.info("Checkout process cancelled. You can resume checkout anytime.");
-        const cleanUrl = window.location.pathname;
-        window.history.replaceState({}, document.title, cleanUrl);
+      } else if (status === "cancel" || status === "cancelled") {
+        window.location.href = `/payment/failed?status=cancelled`;
+        return;
       }
     }
   }, [queryClient, refreshBookings]);
