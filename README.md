@@ -63,7 +63,7 @@ Rentora features an integrated **Interactive Persona Switcher** embedded directl
 - `/` — Editorial Homepage (Hero with instant search, 6 Featured listings, 6 Category cards, Why Choose Us editorial layout, 3-step How It Works, Verified Reviews, Certified Fleet Owners, Owner Monetization CTA, Industrial Footer with X branding).
 - `/equipment` — Advanced Equipment Catalog (3-column responsive layout, multi-parameter keyword & location filter, category facets, price slider, rental type toggles, availability filters, sort orders, and active filter tags).
 - `/equipment/[id]` — Dynamic Equipment Detail Page (Interactive multi-angle photo gallery with modal view, full technical specifications grid, verified owner trust badge, contractual terms, related equipment, and functional Escrow Booking Modal).
-- `/login` — Editorial Authentication (Demo persona quick-login chips, email/password validation, Google SSO mockup, password visibility toggle).
+- `/login` — Editorial Authentication (Standard credentials, Google Sign-In, password visibility toggle).
 - `/register` — Account Registration (Role selector, live avatar preview, full validation feedback).
 
 ### Customer Hub
@@ -109,7 +109,7 @@ Rentora implements strict role-based access control across three user tiers:
 - **Fleet Owner**: Access to machinery listing (with ImgBB uploads), fleet inventory dispatch, rental approval, and fleet revenue analytics.
 - **Platform Administrator**: Access to machinery safety approvals/rejections, global escrow ledger, user directory management, and platform-wide analytics.
 
-In development mode, developers can test each role using the non-production persona switcher or test registration shortcuts. In production, roles are strictly verified and enforced by backend JWT signatures and database authorization checks. Predictable demo credentials and automated account creation are disabled in production.
+User roles are strictly verified and enforced by backend JWT signatures and database authorization checks. Predictable demo credentials and automated account creation are disabled. All accounts authenticate against authoritative database records.
 
 ### 🛡️ XSS Defense & Zero-localStorage JWT Architecture
 To protect against token exfiltration via Cross-Site Scripting (XSS), Rentora **never stores JWT tokens in `localStorage` or `sessionStorage`**:
