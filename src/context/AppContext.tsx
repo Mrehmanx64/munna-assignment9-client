@@ -18,6 +18,7 @@ import {
   normalizeUser,
   normalizeBooking,
   setAccessToken,
+  getAccessToken,
 } from "@/lib/api";
 import { toast } from "sonner";
 
@@ -129,53 +130,78 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [currentRole]);
 
-  useEffect(() => {
-    // Clean up any legacy localStorage session artifacts
-    if (typeof window !== "undefined") {
-      try {
-        localStorage.removeItem("rentora_active_user");
-        localStorage.removeItem("rentora_role");
-        localStorage.removeItem("rentora_favorites");
-        localStorage.removeItem("rentora_access_token");
-      } catch {
-        // Ignore
+  const hydrateSession = useCallback(async () => {
+    try {
+      const res = await authApi.getMe();
+      const rawUser = res.data?.user || res.data?.data?.user || res.data?.data || res.data;
+      const token = res.data?.token || res.data?.data?.token;
+      if (token) {
+        setAccessToken(token);
       }
-    }
-
-    // 1. Initial equipment load
-    refreshEquipment();
-
-    // 2. Validate current session with backend using HttpOnly cookie or active session token
-    const hydrateSession = async () => {
-      try {
-        const res = await authApi.getMe();
-        const rawUser = res.data?.user || res.data?.data?.user || res.data?.data || res.data;
-        const token = res.data?.token || res.data?.data?.token;
-        if (token) {
-          setAccessToken(token);
-        }
-        if (rawUser && (rawUser.id || rawUser._id || rawUser.email)) {
-          const user = normalizeUser(rawUser);
-          setRegisteredUser(user);
-          setRoleState(user.role);
-          refreshFavorites();
-        } else {
-          setRegisteredUser(null);
-          setRoleState("guest");
-          setAccessToken(null);
-        }
-      } catch {
-        // Expired or unauthenticated: set strictly to guest
+      if (rawUser && (rawUser.id || rawUser._id || rawUser.email)) {
+        const user = normalizeUser(rawUser);
+        setRegisteredUser(user);
+        setRoleState(user.role);
+        refreshFavorites();
+      } else {
         setRegisteredUser(null);
         setRoleState("guest");
         setAccessToken(null);
-      } finally {
-        setIsAuthResolving(false);
+      }
+    } catch {
+      // Expired or unauthenticated: set strictly to guest
+      setRegisteredUser(null);
+      setRoleState("guest");
+      setAccessToken(null);
+    } finally {
+      setIsAuthResolving(false);
+    }
+  }, [refreshFavorites]);
+
+  useEffect(() => {
+    // 1. Initial equipment load
+    refreshEquipment();
+
+    // 2. Validate current session with backend using shared token
+    hydrateSession();
+
+    // 3. Multi-tab synchronization listener: instantly sync logouts and account switches across all tabs
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "rentora_auth_token") {
+        if (!e.newValue) {
+          // Logged out in another tab
+          setRegisteredUser(null);
+          setRoleState("guest");
+          setFavorites([]);
+          setBookings([]);
+          toast.info("Signed out from another browser tab");
+        } else if (e.newValue !== e.oldValue) {
+          // Switched accounts or logged in in another tab
+          hydrateSession();
+        }
       }
     };
 
-    hydrateSession();
-  }, [refreshEquipment, refreshFavorites]);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        const currentToken = getAccessToken();
+        if (!currentToken && registeredUser) {
+          setRegisteredUser(null);
+          setRoleState("guest");
+          setFavorites([]);
+          setBookings([]);
+        }
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [refreshEquipment, hydrateSession, registeredUser]);
 
   useEffect(() => {
     if (registeredUser) {

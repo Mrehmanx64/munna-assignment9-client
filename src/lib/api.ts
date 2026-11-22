@@ -25,12 +25,18 @@ export const api = axios.create({
   timeout: 15000,
 });
 
-// In-memory token holder with sessionStorage tab persistence (preserves session across page reloads in the active tab)
+// Shared canonical token storage across tabs and windows
+const AUTH_TOKEN_KEY = "rentora_auth_token";
+
 let inMemoryAccessToken: string | null = null;
 if (typeof window !== "undefined") {
   try {
-    inMemoryAccessToken = sessionStorage.getItem("rentora_session_token");
-    // Ensure clean separation from legacy permanent localStorage tokens
+    inMemoryAccessToken =
+      localStorage.getItem(AUTH_TOKEN_KEY) ||
+      sessionStorage.getItem(AUTH_TOKEN_KEY) ||
+      sessionStorage.getItem("rentora_session_token");
+    // Clean up older keys
+    sessionStorage.removeItem("rentora_session_token");
     localStorage.removeItem("rentora_access_token");
   } catch {
     // Ignore
@@ -42,9 +48,13 @@ export const setAccessToken = (token: string | null): void => {
   if (typeof window !== "undefined") {
     try {
       if (token) {
-        sessionStorage.setItem("rentora_session_token", token);
+        localStorage.setItem(AUTH_TOKEN_KEY, token);
+        sessionStorage.setItem(AUTH_TOKEN_KEY, token);
       } else {
+        localStorage.removeItem(AUTH_TOKEN_KEY);
+        sessionStorage.removeItem(AUTH_TOKEN_KEY);
         sessionStorage.removeItem("rentora_session_token");
+        localStorage.removeItem("rentora_access_token");
       }
     } catch {
       // Ignore
@@ -53,15 +63,17 @@ export const setAccessToken = (token: string | null): void => {
 };
 
 export const getAccessToken = (): string | null => {
-  if (inMemoryAccessToken) return inMemoryAccessToken;
   if (typeof window !== "undefined") {
     try {
-      return sessionStorage.getItem("rentora_session_token");
+      const stored =
+        localStorage.getItem(AUTH_TOKEN_KEY) ||
+        sessionStorage.getItem(AUTH_TOKEN_KEY);
+      if (stored) return stored;
     } catch {
-      return null;
+      // Fallback
     }
   }
-  return null;
+  return inMemoryAccessToken;
 };
 
 // Attach access token if present during active session
