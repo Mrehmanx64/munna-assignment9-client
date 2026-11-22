@@ -360,6 +360,20 @@ export const uploadApi = {
     });
     return res.data?.data?.url || res.data?.data?.displayUrl;
   },
+
+  async uploadAvatar(fileOrBase64: File | string, name?: string) {
+    if (typeof fileOrBase64 === "string") {
+      const res = await api.post("/uploads/avatar", { image: fileOrBase64, name: name || "contractor-avatar" });
+      return res.data?.data?.url || res.data?.data?.displayUrl;
+    }
+    const formData = new FormData();
+    formData.append("image", fileOrBase64);
+    if (name) formData.append("name", name);
+    const res = await api.post("/uploads/avatar", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return res.data?.data?.url || res.data?.data?.displayUrl;
+  },
 };
 
 export const ownerApi = {

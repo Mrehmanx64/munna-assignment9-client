@@ -17,9 +17,12 @@ import {
   Briefcase,
   Wrench,
   AlertCircle,
+  Upload,
+  Loader2,
 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { UserRole } from "@/types";
+import { uploadApi } from "@/lib/api";
 import { toast } from "sonner";
 
 export default function RegisterPage() {
@@ -32,6 +35,8 @@ export default function RegisterPage() {
   const [avatarUrl, setAvatarUrl] = useState(
     "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80"
   );
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -110,6 +115,39 @@ export default function RegisterPage() {
       });
     } else {
       toast.info("Initializing Google Sign-Up, please try again in a moment...");
+    }
+  };
+
+  const handleAvatarFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select a valid image file (PNG, JPG, WEBP, GIF).");
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Image file size exceeds 10MB limit.");
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    try {
+      const uploadedUrl = await uploadApi.uploadAvatar(file);
+      if (uploadedUrl) {
+        setAvatarUrl(uploadedUrl);
+        toast.success("Profile photo uploaded to ImgBB successfully!");
+      } else {
+        throw new Error("No URL returned from upload");
+      }
+    } catch (err: any) {
+      toast.error(
+        err?.response?.data?.message || err?.message || "Failed to upload image to ImgBB"
+      );
+    } finally {
+      setIsUploadingAvatar(false);
+      if (e.target) e.target.value = "";
     }
   };
 
@@ -286,33 +324,76 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            {/* Profile Image URL with live preview */}
+            {/* Profile Image with ImgBB upload and preview */}
             <div>
-              <label htmlFor="reg-avatar" className="block text-[11px] font-bold uppercase tracking-wider text-[#6A726B] mb-1.5">
-                Profile Image URL
-              </label>
-              <div className="flex items-center gap-3">
-                <div className="relative w-10 h-10 rounded-full overflow-hidden bg-[#EAE8DE] shrink-0 border border-[#DCDBCF]">
+              <div className="flex items-center justify-between mb-1.5">
+                <label htmlFor="reg-avatar" className="block text-[11px] font-bold uppercase tracking-wider text-[#6A726B]">
+                  Profile Photo
+                </label>
+                <span className="text-[10px] text-[#8A948D]">ImgBB Upload</span>
+              </div>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                onChange={handleAvatarFileUpload}
+                className="hidden"
+                id="avatar-file-upload"
+              />
+
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                <div className="relative w-11 h-11 rounded-full overflow-hidden bg-[#EAE8DE] shrink-0 border border-[#DCDBCF] shadow-xs">
                   <Image
                     src={avatarUrl}
                     alt="Avatar preview"
                     fill
-                    sizes="40px"
+                    sizes="44px"
                     className="object-cover"
                   />
+                  {isUploadingAvatar && (
+                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                      <Loader2 className="w-4 h-4 text-[#D99A42] animate-spin" />
+                    </div>
+                  )}
                 </div>
-                <div className="relative flex-1">
-                  <ImageIcon className="w-4 h-4 text-[#8A948D] absolute left-3 top-3 pointer-events-none" />
-                  <input
-                    id="reg-avatar"
-                    type="url"
-                    value={avatarUrl}
-                    onChange={(e) => setAvatarUrl(e.target.value)}
-                    placeholder="https://..."
-                    className="w-full pl-9 pr-3 py-2 text-xs bg-white border border-[#DCDBCF] rounded-xs text-[#202824] focus:outline-hidden focus:border-[#183C32]"
-                  />
+
+                <div className="flex-1 w-full flex flex-col sm:flex-row gap-2">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploadingAvatar}
+                    className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold bg-[#183C32] hover:bg-[#122e26] text-white rounded-xs transition-colors disabled:opacity-50 shrink-0 cursor-pointer"
+                  >
+                    {isUploadingAvatar ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-[#D99A42]" />
+                        <span>Uploading...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-3.5 h-3.5 text-[#D99A42]" />
+                        <span>Upload Photo</span>
+                      </>
+                    )}
+                  </button>
+
+                  <div className="relative flex-1">
+                    <ImageIcon className="w-4 h-4 text-[#8A948D] absolute left-3 top-2.5 pointer-events-none" />
+                    <input
+                      id="reg-avatar"
+                      type="url"
+                      value={avatarUrl}
+                      onChange={(e) => setAvatarUrl(e.target.value)}
+                      placeholder="Or paste image URL (https://...)"
+                      className="w-full pl-9 pr-3 py-2 text-xs bg-white border border-[#DCDBCF] rounded-xs text-[#202824] focus:outline-hidden focus:border-[#183C32]"
+                    />
+                  </div>
                 </div>
               </div>
+              <p className="mt-1 text-[10px] text-[#8A948D]">
+                Select an image to host via ImgBB, or keep the default / paste an image URL.
+              </p>
             </div>
 
             {/* Password Field */}
