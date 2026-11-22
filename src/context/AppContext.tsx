@@ -558,10 +558,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       toast.success("Booking initialized! Redirecting to secure Stripe Checkout...");
     } catch (err: any) {
-      const errMsg =
+      const fieldErrors = err?.response?.data?.errors;
+      let errMsg =
         err?.response?.data?.message ||
         err?.message ||
         "Failed to initialize Stripe payment. Please check your reservation details.";
+      if (Array.isArray(fieldErrors) && fieldErrors.length > 0) {
+        const details = fieldErrors
+          .map((f: any) => (f.field ? `${f.field}: ${f.message}` : f.message))
+          .join(", ");
+        errMsg = `${errMsg} (${details})`;
+      }
       toast.error(errMsg);
       throw new Error(errMsg);
     }

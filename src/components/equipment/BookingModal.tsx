@@ -68,8 +68,8 @@ export function BookingModal({ equipment, onClose }: BookingModalProps) {
     e.preventDefault();
     setError(null);
 
-    if (diffDays < 1) {
-      setError("End date must be after the start date.");
+    if (end < start) {
+      setError("Demobilization (end) date cannot be earlier than mobilization (start) date.");
       return;
     }
 
@@ -94,19 +94,19 @@ export function BookingModal({ equipment, onClose }: BookingModalProps) {
         customerId: currentUser?.id || "usr-cust-1",
         customerName: currentUser?.name || "Contractor Customer",
         customerEmail: currentUser?.email || "contractor@apexbuild.com",
-        customerPhone: phone,
+        customerPhone: phone.trim() || "+1 (555) 234-5678",
         ownerId: equipment.ownerId,
         ownerName: equipment.ownerName,
         startDate,
         endDate,
         durationText: `${duration} ${equipment.rentalType || "Day"}${duration > 1 ? "s" : ""}`,
-        quantity,
+        quantity: Math.max(1, Number(quantity) || 1),
         unitPrice: equipment.rentalPrice,
         rentalType: equipment.rentalType,
         totalAmount: estimatedTotal,
         paymentStatus: "pending",
         bookingStatus: "pending",
-        deliveryAddress,
+        deliveryAddress: deliveryAddress.trim() || "Pier 70 Redevelopment Site, San Francisco, CA",
         notes,
       });
 
