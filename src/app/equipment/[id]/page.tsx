@@ -251,9 +251,9 @@ export default function EquipmentDetailsPage() {
             </div>
 
             {/* Right Column: Pricing, Booking Action & Owner Box (5 cols) */}
-            <div className="lg:col-span-5 space-y-6">
+            <div className="lg:col-span-5">
               {/* Sticky Booking Action Card */}
-              <div className="bg-white p-6 sm:p-8 rounded-sm border border-[#DCDBCF] shadow-md space-y-6 lg:sticky lg:top-28">
+              <div className="bg-white p-6 sm:p-8 rounded-sm border border-[#DCDBCF] shadow-md space-y-6 lg:sticky lg:top-24 z-10">
                 {/* Header Tag & Rating */}
                 <div className="flex items-center justify-between">
                   <span className="px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider bg-[#183C32] text-white rounded-xs">
@@ -356,50 +356,52 @@ export default function EquipmentDetailsPage() {
                     <span>Free cancellation up to 48 hours before dispatch</span>
                   </div>
                 </div>
-              </div>
 
-              {/* Owner Information Card */}
-              <div className="bg-white p-6 rounded-sm border border-[#E5E4DC] shadow-2xs space-y-4">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#6A726B]">
-                  Verified Equipment Owner
-                </span>
+                {/* Verified Equipment Owner */}
+                <div className="pt-4 border-t border-[#ECEBE3] space-y-3">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#6A726B] block">
+                    Verified Equipment Owner
+                  </span>
 
-                <div className="flex items-center gap-4">
-                  <div className="relative w-14 h-14 rounded-full overflow-hidden shrink-0 border-2 border-[#183C32]">
-                    <Image
-                      src={equipment.ownerAvatar}
-                      alt={equipment.ownerName}
-                      fill
-                      sizes="56px"
-                      className="object-cover"
-                    />
+                  <div className="flex items-center gap-3">
+                    <div className="relative w-12 h-12 rounded-full overflow-hidden shrink-0 border-2 border-[#183C32]">
+                      <Image
+                        src={equipment.ownerAvatar}
+                        alt={equipment.ownerName}
+                        fill
+                        sizes="48px"
+                        className="object-cover"
+                      />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <h4 className="font-heading text-sm font-bold text-[#183C32] truncate">
+                          {equipment.ownerName}
+                        </h4>
+                        {equipment.ownerVerified && (
+                          <ShieldCheck className="w-4 h-4 text-[#2E6B4F] shrink-0" />
+                        )}
+                      </div>
+                      <span className="text-xs text-[#6A726B] block">
+                        Authorized Machinery Supplier
+                      </span>
+                    </div>
                   </div>
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <h4 className="font-heading text-base font-bold text-[#183C32]">
-                        {equipment.ownerName}
-                      </h4>
-                      {equipment.ownerVerified && (
-                        <ShieldCheck className="w-4 h-4 text-[#2E6B4F]" />
+
+                  {(equipment.ownerPhone || equipment.ownerEmail) && (
+                    <div className="pt-1 flex flex-col gap-1 text-xs text-[#525B55]">
+                      {equipment.ownerPhone && (
+                        <div className="flex items-center gap-2">
+                          <Phone className="w-3.5 h-3.5 text-[#8A948D] shrink-0" />
+                          <span>{equipment.ownerPhone}</span>
+                        </div>
                       )}
-                    </div>
-                    <span className="text-xs text-[#6A726B]">
-                      Authorized Machinery Supplier
-                    </span>
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-[#ECEBE3] space-y-1.5 text-xs text-[#525B55]">
-                  {equipment.ownerPhone && (
-                    <div className="flex items-center gap-2">
-                      <Phone className="w-3.5 h-3.5 text-[#8A948D]" />
-                      <span>{equipment.ownerPhone}</span>
-                    </div>
-                  )}
-                  {equipment.ownerEmail && (
-                    <div className="flex items-center gap-2">
-                      <Mail className="w-3.5 h-3.5 text-[#8A948D]" />
-                      <span>{equipment.ownerEmail}</span>
+                      {equipment.ownerEmail && (
+                        <div className="flex items-center gap-2">
+                          <Mail className="w-3.5 h-3.5 text-[#8A948D] shrink-0" />
+                          <span className="truncate">{equipment.ownerEmail}</span>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
