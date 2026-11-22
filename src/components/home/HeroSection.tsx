@@ -18,6 +18,7 @@ import {
   Activity,
   Award,
 } from "lucide-react";
+import { motion } from "framer-motion";
 
 export function HeroSection() {
   const router = useRouter();
@@ -67,7 +68,12 @@ export function HeroSection() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-center">
 
           {/* ── LEFT COLUMN ── */}
-          <div className="lg:col-span-7 space-y-6">
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="lg:col-span-7 space-y-6"
+          >
 
             {/* Badge */}
             <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#EBEAE3] border border-[#DCDBCF] text-xs font-bold uppercase tracking-widest text-[#183C32]">
@@ -223,10 +229,15 @@ export function HeroSection() {
                 <span>List Your Equipment</span>
               </Link>
             </div>
-          </div>
+          </motion.div>
 
           {/* ── RIGHT COLUMN ── */}
-          <div className="lg:col-span-5 relative">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.7, delay: 0.2 }}
+            className="lg:col-span-5 relative"
+          >
             <div className="relative mx-auto max-w-md lg:max-w-none">
 
               {/* Primary Image Card */}
@@ -324,11 +335,17 @@ export function HeroSection() {
                 <span>$2.5M COI Escrow</span>
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
 
         {/* ── Metrics Bar ── */}
-        <div className="mt-16 pt-10 border-t border-[#E5E4DC]">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="mt-16 pt-10 border-t border-[#E5E4DC]"
+        >
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
             {[
               { value: "$42M+", label: "Insured Fleet Value", accent: "#183C32" },
@@ -342,7 +359,7 @@ export function HeroSection() {
               </div>
             ))}
           </div>
-        </div>
+        </motion.div>
       </div>
     </section>
   );

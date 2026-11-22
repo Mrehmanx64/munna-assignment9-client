@@ -4,6 +4,7 @@ import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Sparkles, PackageSearch } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { motion } from "framer-motion";
 import { EquipmentCard } from "@/components/equipment/EquipmentCard";
 import { useApp } from "@/context/AppContext";
 import { equipmentApi } from "@/lib/api";
@@ -58,7 +59,13 @@ export function FeaturedSection() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 
         {/* Section Header */}
-        <div className="mb-10 flex flex-col justify-between gap-6 md:flex-row md:items-end">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+          className="mb-10 flex flex-col justify-between gap-6 md:flex-row md:items-end"
+        >
           <div className="space-y-3">
             <div className="inline-flex items-center gap-2 text-xs font-bold tracking-wider text-[#D99A42] uppercase">
               <Sparkles className="h-4 w-4" />
@@ -79,7 +86,7 @@ export function FeaturedSection() {
             <span>View Complete Catalog ({sourceEquipment.length})</span>
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
           </Link>
-        </div>
+        </motion.div>
 
         {/* Category Filters */}
         <div className="no-scrollbar mb-8 flex items-center gap-2 overflow-x-auto pb-2">
@@ -116,11 +123,18 @@ export function FeaturedSection() {
         ) : filteredEquipment.length > 0 ? (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-8 lg:grid-cols-3">
             {filteredEquipment.map((equipment, index) => (
-              <EquipmentCard
+              <motion.div
                 key={equipment.id}
-                equipment={equipment}
-                priority={index < 3}
-              />
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.45, delay: (index % 3) * 0.1 }}
+              >
+                <EquipmentCard
+                  equipment={equipment}
+                  priority={index < 3}
+                />
+              </motion.div>
             ))}
           </div>
         ) : (

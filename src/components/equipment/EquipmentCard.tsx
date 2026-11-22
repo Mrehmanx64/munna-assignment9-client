@@ -20,8 +20,14 @@ interface EquipmentCardProps {
 }
 
 export function EquipmentCard({ equipment, priority = false }: EquipmentCardProps) {
-  const { isFavorite, toggleFavorite } = useApp();
+  const { currentUser, currentRole, isFavorite, toggleFavorite } = useApp();
   const favorited = isFavorite(equipment.id);
+
+  // If user is not logged in, redirect to login with return URL; otherwise redirect directly to details
+  const detailsHref =
+    currentUser && currentRole !== "guest"
+      ? `/equipment/${equipment.id}`
+      : `/login?redirect=${encodeURIComponent(`/equipment/${equipment.id}`)}`;
 
   return (
     <div className="group bg-white rounded-sm border border-[#E5E4DC] hover:border-[#183C32] transition-all duration-300 shadow-2xs hover:shadow-md flex flex-col overflow-hidden">
@@ -89,7 +95,7 @@ export function EquipmentCard({ equipment, priority = false }: EquipmentCardProp
           </div>
 
           {/* Title */}
-          <Link href={`/equipment/${equipment.id}`} className="focus:outline-hidden">
+          <Link href={detailsHref} className="focus:outline-hidden">
             <h3 className="font-heading text-base font-bold text-[#202824] group-hover:text-[#183C32] transition-colors line-clamp-1">
               {equipment.title}
             </h3>
@@ -124,10 +130,10 @@ export function EquipmentCard({ equipment, priority = false }: EquipmentCardProp
           </div>
 
           <Link
-            href={`/equipment/${equipment.id}`}
+            href={detailsHref}
             className="px-3.5 py-1.5 bg-[#EBEAE3] hover:bg-[#183C32] text-[#183C32] hover:text-[#F7F6F1] text-xs font-semibold rounded-xs transition-colors inline-flex items-center gap-1.5"
           >
-            <span>Details</span>
+            <span>View Details</span>
             <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
           </Link>
         </div>
