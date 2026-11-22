@@ -8,57 +8,54 @@ import {
   UserRole,
 } from "@/types";
 import {
-  MOCK_EQUIPMENT,
-  MOCK_BOOKINGS,
-  MOCK_USERS,
-} from "@/data/mockData";
-import {
   authApi,
   equipmentApi,
   favoriteApi,
   bookingApi,
   adminApi,
   ownerApi,
+  userApi,
   normalizeUser,
   normalizeBooking,
-  setAccessToken,
 } from "@/lib/api";
 import { toast } from "sonner";
 
 interface AppContextType {
   currentUser: User | null;
   currentRole: UserRole | "guest";
+  isAuthResolving: boolean;
   setCurrentRole: (role: UserRole | "guest") => void;
   registerUser: (userData: {
     name: string;
     email: string;
-    password?: string;
-    role: UserRole;
+    password: string;
+    role?: UserRole;
     avatarUrl?: string;
     phone?: string;
     address?: string;
   }) => Promise<User>;
-  loginUser: (email: string, password?: string, role?: UserRole) => Promise<User | null>;
-  loginWithGoogle: (googleData: {
-    email: string;
-    name: string;
-    avatarUrl?: string;
-    googleId?: string;
-  }) => Promise<User | null>;
+  loginUser: (email: string, password?: string) => Promise<User | null>;
+  loginWithGoogle: (idToken: string) => Promise<User | null>;
   logout: () => Promise<void>;
+  updateProfile: (data: {
+    name?: string;
+    phone?: string;
+    address?: string;
+    avatarUrl?: string;
+  }) => Promise<User>;
   favorites: string[];
   toggleFavorite: (equipmentId: string) => Promise<void>;
   isFavorite: (equipmentId: string) => boolean;
   equipmentList: Equipment[];
   refreshEquipment: () => Promise<void>;
   addEquipment: (equipment: Omit<Equipment, "id" | "createdAt" | "rating" | "reviewCount">) => Promise<void>;
+  updateEquipment: (id: string, data: Partial<Equipment>) => Promise<Equipment>;
   updateEquipmentStatus: (id: string, status: Equipment["status"], reason?: string) => Promise<void>;
   deleteEquipment: (id: string) => Promise<void>;
   bookings: RentalBooking[];
   refreshBookings: () => Promise<void>;
   addBooking: (booking: Omit<RentalBooking, "id" | "createdAt">) => Promise<string | undefined>;
   updateBookingStatus: (id: string, status: RentalBooking["bookingStatus"]) => Promise<void>;
-  updatePaymentStatus: (id: string, status: RentalBooking["paymentStatus"]) => Promise<void>;
   users: User[];
   refreshUsers: () => Promise<void>;
   updateUserRole: (userId: string, newRole: UserRole) => Promise<void>;
@@ -67,45 +64,13 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [currentRole, setRoleState] = useState<UserRole | "guest">(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const savedRole = localStorage.getItem("rentora_role") as UserRole | "guest" | null;
-        if (savedRole) return savedRole;
-      } catch {
-        // Ignore
-      }
-    }
-    return "guest";
-  });
-
-  const [registeredUser, setRegisteredUser] = useState<User | null>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem("rentora_active_user");
-        if (saved) return JSON.parse(saved);
-      } catch {
-        // Ignore
-      }
-    }
-    return null;
-  });
-
-  const [favorites, setFavorites] = useState<string[]>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const savedFavorites = localStorage.getItem("rentora_favorites");
-        if (savedFavorites) return JSON.parse(savedFavorites);
-      } catch {
-        // Ignore
-      }
-    }
-    return [];
-  });
-
-  const [equipmentList, setEquipmentList] = useState<Equipment[]>(MOCK_EQUIPMENT);
-  const [bookings, setBookings] = useState<RentalBooking[]>(MOCK_BOOKINGS);
-  const [users, setUsers] = useState<User[]>(MOCK_USERS);
+  const [currentRole, setRoleState] = useState<UserRole | "guest">("guest");
+  const [registeredUser, setRegisteredUser] = useState<User | null>(null);
+  const [isAuthResolving, setIsAuthResolving] = useState<boolean>(true);
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
+  const [bookings, setBookings] = useState<RentalBooking[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
 
   // --------------------------------------------------------------------------
   // HYDRATE FROM BACKEND ON MOUNT
@@ -113,11 +78,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const refreshEquipment = useCallback(async () => {
     try {
       const res = await equipmentApi.getEquipment({ limit: 50 });
-      if (res.equipment && res.equipment.length > 0) {
+      if (res.equipment) {
         setEquipmentList(res.equipment);
       }
     } catch {
-      // Backend not running or empty; fallback to mock items
+      // Backend error
     }
   }, []);
 
@@ -127,12 +92,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (res.favorites) {
         const ids = res.favorites.map((f: any) => f.equipment?.id || f.equipmentId || f._id);
         setFavorites(ids.filter(Boolean));
-        if (typeof window !== "undefined") {
-          localStorage.setItem("rentora_favorites", JSON.stringify(ids));
-        }
       }
     } catch {
-      // Not logged in or error; keep local favorites
+      // Not logged in or unauthenticated
     }
   }, []);
 
@@ -157,7 +119,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       if (currentRole === "admin") {
         const res = await adminApi.getUsers();
-        if (res.users && res.users.length > 0) {
+        if (res.users) {
           setUsers(res.users);
         }
       }
@@ -167,49 +129,41 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [currentRole]);
 
   useEffect(() => {
+    // Clean up any legacy localStorage session artifacts
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.removeItem("rentora_active_user");
+        localStorage.removeItem("rentora_role");
+        localStorage.removeItem("rentora_favorites");
+        localStorage.removeItem("rentora_access_token");
+      } catch {
+        // Ignore
+      }
+    }
+
     // 1. Initial equipment load
     refreshEquipment();
 
-    // 2. Validate current session with backend
+    // 2. Validate current session with backend using HttpOnly cookie
     const hydrateSession = async () => {
       try {
         const res = await authApi.getMe();
-        if (res.data?.user) {
-          const user = normalizeUser(res.data.user);
+        const rawUser = res.data?.user || res.data?.data?.user || res.data?.data || res.data;
+        if (rawUser && (rawUser.id || rawUser._id || rawUser.email)) {
+          const user = normalizeUser(rawUser);
           setRegisteredUser(user);
           setRoleState(user.role);
-          if (typeof window !== "undefined") {
-            localStorage.setItem("rentora_active_user", JSON.stringify(user));
-            localStorage.setItem("rentora_role", user.role);
-          }
           refreshFavorites();
-        }
-      } catch {
-        // If getMe failed, check if cached active user and token exist in storage
-        if (typeof window !== "undefined") {
-          const cachedUser = localStorage.getItem("rentora_active_user");
-          const cachedToken = localStorage.getItem("rentora_access_token");
-          if (cachedUser && cachedToken) {
-            try {
-              const user = JSON.parse(cachedUser);
-              setRegisteredUser(user);
-              setRoleState(user.role);
-              return;
-            } catch {
-              // Ignore
-            }
-          }
-        }
-        // Token expired or unauthenticated: ensure guest state
-        if (process.env.NODE_ENV === "production") {
+        } else {
           setRegisteredUser(null);
           setRoleState("guest");
-          if (typeof window !== "undefined") {
-            localStorage.removeItem("rentora_active_user");
-            localStorage.setItem("rentora_role", "guest");
-            localStorage.removeItem("rentora_access_token");
-          }
         }
+      } catch {
+        // Expired or unauthenticated: set strictly to guest
+        setRegisteredUser(null);
+        setRoleState("guest");
+      } finally {
+        setIsAuthResolving(false);
       }
     };
 
@@ -228,163 +182,109 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // ROLE & AUTH METHODS
   // --------------------------------------------------------------------------
   const setCurrentRole = (role: UserRole | "guest") => {
-    // In production, persona switching is disabled: backend JWT is the sole authority for role
-    if (process.env.NODE_ENV === "production") {
-      if (role === "guest") {
-        logout();
-        return;
-      }
-      if (registeredUser) {
-        if (registeredUser.role !== role) {
-          toast.error("Role switching is disabled in production. Please log in with an account that possesses this role.");
-          return;
-        }
-      } else {
-        toast.error("Please sign in to access this role.");
-        return;
-      }
-    }
-
-    setRoleState(role);
-    try {
-      localStorage.setItem("rentora_role", role);
-    } catch {
-      // Ignore storage errors
-    }
     if (role === "guest") {
-      toast.info("Switched to Guest mode (logged out)");
+      logout();
+      return;
+    }
+    if (registeredUser) {
+      if (registeredUser.role !== role) {
+        toast.error("Role switching is disabled. Your verified account role is " + registeredUser.role);
+        return;
+      }
+      setRoleState(role);
     } else {
-      const u =
-        registeredUser && registeredUser.role === role
-          ? registeredUser
-          : users.find((usr) => usr.role === role);
-      toast.success(`Switched active view to ${role.toUpperCase()}: ${u?.name || role}`);
+      toast.error("Please sign in to access your dashboard.");
     }
   };
 
   const registerUser = async (userData: {
     name: string;
     email: string;
-    password?: string;
-    role: UserRole;
+    password: string;
+    role?: UserRole;
     avatarUrl?: string;
     phone?: string;
     address?: string;
   }): Promise<User> => {
-    let createdUser: User;
-    const defaultPassword = userData.password || "Password@1234";
+    if (!userData.password) {
+      throw new Error("Password is required for registration.");
+    }
 
     try {
       const res = await authApi.register({
         name: userData.name,
         email: userData.email,
-        password: defaultPassword,
-        confirmPassword: defaultPassword,
-        role: userData.role,
+        password: userData.password,
+        confirmPassword: userData.password,
+        role: "customer", // Strict requirement: Customer role only for public registration
         avatarUrl: userData.avatarUrl,
         phone: userData.phone,
         address: userData.address,
       });
 
-      if (res.data?.token) {
-        setAccessToken(res.data.token);
+      const rawUser = res.data?.user || res.data?.data?.user || res.data?.data;
+      if (!rawUser) {
+        throw new Error("Invalid registration response from server");
       }
-      createdUser = normalizeUser(res.data?.user);
+
+      const createdUser = normalizeUser(rawUser);
+      setRegisteredUser(createdUser);
+      setRoleState(createdUser.role);
+      toast.success("Registration successful! Welcome to Rentora.");
+      return createdUser;
     } catch (err: any) {
-      // If server is unreachable, create offline user gracefully
-      createdUser = {
-        id: `usr-${Date.now().toString().slice(-6)}`,
-        name: userData.name,
-        email: userData.email,
-        role: userData.role,
-        avatarUrl:
-          userData.avatarUrl ||
-          "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80",
-        phone: userData.phone || "+1 (555) 234-5678",
-        address: userData.address || "Industrial Way, Suite 400",
-        joinedDate: "Today",
-        totalRentals: 0,
-      };
-      toast.warning(err.message || "Offline registration saved locally");
+      const errMsg =
+        err?.response?.data?.message || err?.message || "Registration failed. Please check your information.";
+      toast.error(errMsg);
+      throw new Error(errMsg);
     }
-
-    setUsers((prev) => [createdUser, ...prev.filter((u) => u.email !== createdUser.email)]);
-    setRegisteredUser(createdUser);
-    setRoleState(createdUser.role);
-
-    try {
-      localStorage.setItem("rentora_active_user", JSON.stringify(createdUser));
-      localStorage.setItem("rentora_role", createdUser.role);
-    } catch {
-      // Ignore
-    }
-
-    return createdUser;
   };
 
-  const loginUser = async (email: string, password?: string, role?: UserRole): Promise<User | null> => {
-    let userToUse: User | null = null;
-    const pass = password || "Password@1234";
-
-    try {
-      const res = await authApi.login({ email, password: pass });
-      if (res.data?.token) {
-        setAccessToken(res.data.token);
-      }
-      userToUse = normalizeUser(res.data?.user);
-    } catch {
-      // Fallback to local user detection
-      const found = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
-      const targetRole = role || found?.role || "customer";
-      userToUse =
-        found ||
-        (registeredUser && registeredUser.email.toLowerCase() === email.toLowerCase()
-          ? registeredUser
-          : users.find((u) => u.role === targetRole) || users[0]);
+  const loginUser = async (email: string, password?: string): Promise<User | null> => {
+    if (!password) {
+      const msg = "Please enter your password to sign in.";
+      toast.error(msg);
+      throw new Error(msg);
     }
 
-    if (userToUse) {
-      setRegisteredUser(userToUse);
-      setRoleState(userToUse.role);
-
-      try {
-        localStorage.setItem("rentora_active_user", JSON.stringify(userToUse));
-        localStorage.setItem("rentora_role", userToUse.role);
-      } catch {
-        // Ignore
+    try {
+      const res = await authApi.login({ email, password });
+      const rawUser = res.data?.user || res.data?.data?.user || res.data?.data;
+      if (!rawUser) {
+        throw new Error("Invalid authentication credentials");
       }
+
+      const loggedInUser = normalizeUser(rawUser);
+      setRegisteredUser(loggedInUser);
+      setRoleState(loggedInUser.role);
       refreshFavorites();
       refreshBookings();
+      return loggedInUser;
+    } catch (err: any) {
+      const errMsg = err?.response?.data?.message || err?.message || "Failed to sign in. Please check credentials.";
+      toast.error(errMsg);
+      throw new Error(errMsg);
     }
-
-    return userToUse;
   };
 
-  const loginWithGoogle = async (googleData: {
-    email: string;
-    name: string;
-    avatarUrl?: string;
-    googleId?: string;
-  }): Promise<User | null> => {
+  const loginWithGoogle = async (idToken: string): Promise<User | null> => {
     try {
-      const res = await authApi.googleAuth(googleData);
-      if (res.data?.token) {
-        setAccessToken(res.data.token);
+      const res = await authApi.googleAuth({ idToken });
+      const rawUser = res.data?.user || res.data?.data?.user || res.data?.data;
+      if (!rawUser) {
+        throw new Error("Google authentication failed to retrieve user profile");
       }
-      const userToUse = normalizeUser(res.data?.user);
+
+      const userToUse = normalizeUser(rawUser);
       setRegisteredUser(userToUse);
       setRoleState(userToUse.role);
-      try {
-        localStorage.setItem("rentora_active_user", JSON.stringify(userToUse));
-        localStorage.setItem("rentora_role", userToUse.role);
-      } catch {
-        // Ignore
-      }
       refreshFavorites();
       refreshBookings();
       return userToUse;
     } catch (err: any) {
-      throw new Error(err?.response?.data?.message || err?.message || "Google authentication failed");
+      const errMsg = err?.response?.data?.message || err?.message || "Google authentication failed";
+      toast.error(errMsg);
+      throw new Error(errMsg);
     }
   };
 
@@ -392,29 +292,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       await authApi.logout();
     } catch {
-      // Ignore
+      // Ignore network failure on logout
     }
-    setAccessToken(null);
     setRegisteredUser(null);
     setRoleState("guest");
     setFavorites([]);
-    try {
-      localStorage.removeItem("rentora_active_user");
-      localStorage.setItem("rentora_role", "guest");
-      localStorage.removeItem("rentora_favorites");
-      localStorage.removeItem("rentora_access_token");
-    } catch {
-      // Ignore
-    }
+    setBookings([]);
     toast.info("Signed out to Guest mode");
   };
 
-  const currentUser =
-    currentRole === "guest"
-      ? null
-      : registeredUser && registeredUser.role === currentRole
-      ? registeredUser
-      : users.find((u) => u.role === currentRole) || users[0];
+  const updateProfile = async (data: {
+    name?: string;
+    phone?: string;
+    address?: string;
+    avatarUrl?: string;
+  }): Promise<User> => {
+    try {
+      const updatedUser = await userApi.updateProfile(data);
+      setRegisteredUser(updatedUser);
+      toast.success("Profile credentials updated successfully!");
+      return updatedUser;
+    } catch (err: any) {
+      const errMsg = err?.response?.data?.message || err?.message || "Failed to update profile";
+      toast.error(errMsg);
+      throw new Error(errMsg);
+    }
+  };
+
+  const currentUser = currentRole === "guest" ? null : registeredUser;
 
   // --------------------------------------------------------------------------
   // FAVORITES
@@ -422,25 +327,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const isFavorite = (equipmentId: string) => favorites.includes(equipmentId);
 
   const toggleFavorite = async (equipmentId: string) => {
-    const exists = favorites.includes(equipmentId);
-    const next = exists ? favorites.filter((id) => id !== equipmentId) : [...favorites, equipmentId];
-    setFavorites(next);
-    try {
-      localStorage.setItem("rentora_favorites", JSON.stringify(next));
-    } catch {
-      // Ignore
+    if (!registeredUser || currentRole === "guest") {
+      toast.info("Please sign in to save equipment to your favorites");
+      return;
     }
+
+    const exists = favorites.includes(equipmentId);
 
     try {
       if (exists) {
         await favoriteApi.removeFavorite(equipmentId);
+        setFavorites((prev) => prev.filter((id) => id !== equipmentId));
         toast.info("Removed from saved equipment");
       } else {
         await favoriteApi.addFavorite(equipmentId);
+        setFavorites((prev) => [...prev, equipmentId]);
         toast.success("Saved to favorites");
       }
-    } catch {
-      toast.info(exists ? "Removed from favorites (local)" : "Saved to favorites (local)");
+    } catch (err: any) {
+      const errMsg = err?.response?.data?.message || err?.message || "Failed to update favorite status";
+      toast.error(errMsg);
     }
   };
 
@@ -470,17 +376,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       });
       setEquipmentList((prev) => [created, ...prev]);
       toast.success("Equipment listing submitted for admin review!");
-    } catch {
-      const localEquipment: Equipment = {
-        ...data,
-        id: `eq-${Date.now()}`,
-        rating: 5.0,
-        reviewCount: 0,
-        createdAt: new Date().toISOString().split("T")[0],
-        status: "pending",
-      };
-      setEquipmentList((prev) => [localEquipment, ...prev]);
-      toast.success("Equipment listing submitted for review!");
+    } catch (err: any) {
+      const errMsg = err?.response?.data?.message || err?.message || "Failed to create equipment listing";
+      toast.error(errMsg);
+      throw new Error(errMsg);
+    }
+  };
+
+  const updateEquipment = async (id: string, data: Partial<Equipment>): Promise<Equipment> => {
+    try {
+      const updated = await ownerApi.updateEquipment(id, data);
+      setEquipmentList((prev) =>
+        prev.map((eq) => (eq.id === id ? updated : eq))
+      );
+      toast.success("Equipment listing updated successfully");
+      return updated;
+    } catch (err: any) {
+      const errMsg = err?.response?.data?.message || err?.message || "Failed to update equipment listing";
+      toast.error(errMsg);
+      throw new Error(errMsg);
     }
   };
 
@@ -495,13 +409,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       } else if (status === "rejected") {
         await adminApi.rejectEquipment(id, reason);
       }
-    } catch {
-      // Local fallback
+      setEquipmentList((prev) =>
+        prev.map((eq) => (eq.id === id ? { ...eq, status } : eq))
+      );
+      toast.success(`Equipment listing marked as ${status}`);
+    } catch (err: any) {
+      const errMsg = err?.response?.data?.message || err?.message || "Failed to update equipment status";
+      toast.error(errMsg);
+      throw new Error(errMsg);
     }
-    setEquipmentList((prev) =>
-      prev.map((eq) => (eq.id === id ? { ...eq, status } : eq))
-    );
-    toast.success(`Equipment listing marked as ${status}`);
   };
 
   const deleteEquipment = async (id: string) => {
@@ -511,11 +427,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       } else {
         await ownerApi.deleteEquipment(id);
       }
-    } catch {
-      // Local fallback
+      setEquipmentList((prev) => prev.filter((eq) => eq.id !== id));
+      toast.success("Equipment listing deleted successfully");
+    } catch (err: any) {
+      const errMsg = err?.response?.data?.message || err?.message || "Failed to delete equipment listing";
+      toast.error(errMsg);
+      throw new Error(errMsg);
     }
-    setEquipmentList((prev) => prev.filter((eq) => eq.id !== id));
-    toast.success("Equipment listing deleted successfully");
   };
 
   // --------------------------------------------------------------------------
@@ -560,41 +478,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     id: string,
     status: RentalBooking["bookingStatus"]
   ) => {
-    try {
-      await adminApi.updateBookingStatus(id, {
-        bookingStatus:
-          status === "confirmed"
-            ? "Confirmed"
-            : status === "completed"
-            ? "Completed"
-            : status === "cancelled"
-            ? "Cancelled"
-            : "Active",
-      });
-    } catch {
-      // Local fallback
-    }
-    setBookings((prev) =>
-      prev.map((bk) => (bk.id === id ? { ...bk, bookingStatus: status } : bk))
-    );
-    toast.success(`Booking status updated to ${status}`);
-  };
+    const backendStatus =
+      status === "confirmed"
+        ? "Confirmed"
+        : status === "completed"
+        ? "Completed"
+        : status === "cancelled"
+        ? "Cancelled"
+        : "Active";
 
-  const updatePaymentStatus = async (
-    id: string,
-    status: RentalBooking["paymentStatus"]
-  ) => {
     try {
-      await adminApi.updateBookingStatus(id, {
-        paymentStatus: status === "paid" ? "Paid" : status === "refunded" ? "Refunded" : "Pending",
-      });
-    } catch {
-      // Local fallback
+      if (currentRole === "owner") {
+        await ownerApi.updateBookingStatus(id, backendStatus);
+      } else {
+        await adminApi.updateBookingStatus(id, { bookingStatus: backendStatus });
+      }
+      setBookings((prev) =>
+        prev.map((bk) => (bk.id === id ? { ...bk, bookingStatus: status } : bk))
+      );
+      toast.success(`Booking status updated to ${status}`);
+    } catch (err: any) {
+      const errMsg = err?.response?.data?.message || err?.message || "Failed to update booking status";
+      toast.error(errMsg);
+      throw new Error(errMsg);
     }
-    setBookings((prev) =>
-      prev.map((bk) => (bk.id === id ? { ...bk, paymentStatus: status } : bk))
-    );
-    toast.success(`Payment status updated to ${status}`);
   };
 
   // --------------------------------------------------------------------------
@@ -608,7 +515,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       );
       toast.success(`User role updated to ${newRole}`);
     } catch (err: any) {
-      toast.error(err.message || "Failed to update user role");
+      const errMsg = err?.response?.data?.message || err?.message || "Failed to update user role";
+      toast.error(errMsg);
+      throw new Error(errMsg);
     }
   };
 
@@ -617,24 +526,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       value={{
         currentUser,
         currentRole,
+        isAuthResolving,
         setCurrentRole,
         registerUser,
         loginUser,
         loginWithGoogle,
         logout,
+        updateProfile,
         favorites,
         toggleFavorite,
         isFavorite,
         equipmentList,
         refreshEquipment,
         addEquipment,
+        updateEquipment,
         updateEquipmentStatus,
         deleteEquipment,
         bookings,
         refreshBookings,
         addBooking,
         updateBookingStatus,
-        updatePaymentStatus,
         users,
         refreshUsers,
         updateUserRole,

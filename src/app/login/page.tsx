@@ -45,26 +45,11 @@ function LoginForm() {
         if (!response.credential) {
           throw new Error("No Google authentication token received");
         }
-        const base64Url = response.credential.split(".")[1];
-        const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-        const jsonPayload = decodeURIComponent(
-          atob(base64)
-            .split("")
-            .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-            .join("")
-        );
-        const payload = JSON.parse(jsonPayload);
-
-        const user = await loginWithGoogle({
-          email: payload.email,
-          name: payload.name || payload.email.split("@")[0],
-          avatarUrl: payload.picture,
-          googleId: payload.sub,
-        });
+        const user = await loginWithGoogle(response.credential);
 
         if (user) {
           toast.success(`Welcome to Rentora, ${user.name}!`);
-          if (redirectUrl) {
+          if (redirectUrl && redirectUrl.startsWith("/") && !redirectUrl.startsWith("//") && !redirectUrl.includes(":")) {
             router.push(redirectUrl);
           } else {
             router.push(`/dashboard/${user.role}`);
@@ -134,24 +119,19 @@ function LoginForm() {
     setIsLoading(true);
 
     try {
-      // Auto-detect role or default customer
-      let detectedRole: UserRole = "customer";
-      if (email.includes("owner") || email.includes("marcus")) {
-        detectedRole = "owner";
-      } else if (email.includes("admin") || email.includes("elena")) {
-        detectedRole = "admin";
-      }
-
-      const user = await loginUser(email, password, detectedRole);
+      const user = await loginUser(email, password);
       setIsLoading(false);
       toast.success("Signed in successfully to Rentora!");
 
       if (redirectUrl) {
-        router.push(redirectUrl);
-        return;
+        // Validate redirect to prevent open redirect attacks
+        if (redirectUrl.startsWith("/") && !redirectUrl.startsWith("//") && !redirectUrl.includes(":")) {
+          router.push(redirectUrl);
+          return;
+        }
       }
 
-      const roleToRoute = user?.role || detectedRole;
+      const roleToRoute = user?.role || "customer";
       if (roleToRoute === "owner") {
         router.push("/dashboard/owner");
       } else if (roleToRoute === "admin") {

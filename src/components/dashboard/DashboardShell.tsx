@@ -33,20 +33,16 @@ interface DashboardShellProps {
 export function DashboardShell({ children }: DashboardShellProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { currentUser, currentRole, logout, favorites, bookings } = useApp();
+  const { currentUser, currentRole, isAuthResolving, logout, favorites, bookings } = useApp();
 
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
-  // Role-based route guard
-  const isUnauthorized =
-    currentRole === "guest" ||
-    !currentUser ||
-    (pathname.startsWith("/dashboard/admin") && currentRole !== "admin") ||
-    (pathname.startsWith("/dashboard/owner") && currentRole !== "owner" && currentRole !== "admin");
-
   useEffect(() => {
+    // Wait until authoritative session restoration completes before checking route authorization
+    if (isAuthResolving) return;
+
     if (currentRole === "guest" || !currentUser) {
       toast.error("Please sign in to access your dashboard.");
       router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
@@ -64,7 +60,19 @@ export function DashboardShell({ children }: DashboardShellProps) {
       router.replace("/dashboard/customer");
       return;
     }
-  }, [currentRole, currentUser, pathname, router]);
+  }, [currentRole, currentUser, isAuthResolving, pathname, router]);
+
+  // Loading state while verifying authoritative session
+  if (isAuthResolving) {
+    return (
+      <div className="min-h-screen bg-[#F7F6F1] flex flex-col items-center justify-center p-6 space-y-4">
+        <div className="w-10 h-10 border-4 border-[#183C32]/20 border-t-[#183C32] rounded-full animate-spin" />
+        <p className="text-xs uppercase font-bold tracking-widest text-[#6A726B]">
+          Authenticating Fleet Telematics...
+        </p>
+      </div>
+    );
+  }
 
   // Role-based navigation links
   const customerLinks = [
@@ -126,6 +134,12 @@ export function DashboardShell({ children }: DashboardShellProps) {
       read: true,
     },
   ];
+
+  const isUnauthorized =
+    currentRole === "guest" ||
+    !currentUser ||
+    (pathname.startsWith("/dashboard/admin") && currentRole !== "admin") ||
+    (pathname.startsWith("/dashboard/owner") && currentRole !== "owner" && currentRole !== "admin");
 
   if (isUnauthorized) {
     return (

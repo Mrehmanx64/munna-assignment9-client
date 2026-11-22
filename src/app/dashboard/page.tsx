@@ -6,9 +6,11 @@ import { useApp } from "@/context/AppContext";
 
 export default function DashboardIndexPage() {
   const router = useRouter();
-  const { currentUser, currentRole } = useApp();
+  const { currentUser, currentRole, isAuthResolving } = useApp();
 
   useEffect(() => {
+    if (isAuthResolving) return;
+
     if (!currentUser || currentRole === "guest") {
       router.replace("/login?redirect=/dashboard");
     } else if (currentRole === "owner") {
@@ -18,7 +20,7 @@ export default function DashboardIndexPage() {
     } else {
       router.replace("/dashboard/customer");
     }
-  }, [currentUser, currentRole, router]);
+  }, [currentUser, currentRole, isAuthResolving, router]);
 
   return (
     <div className="flex items-center justify-center p-12">

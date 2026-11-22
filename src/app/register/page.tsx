@@ -54,22 +54,8 @@ export default function RegisterPage() {
         if (!response.credential) {
           throw new Error("No Google authentication token received");
         }
-        const base64Url = response.credential.split(".")[1];
-        const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-        const jsonPayload = decodeURIComponent(
-          atob(base64)
-            .split("")
-            .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-            .join("")
-        );
-        const payload = JSON.parse(jsonPayload);
 
-        const user = await loginWithGoogle({
-          email: payload.email,
-          name: payload.name || payload.email.split("@")[0],
-          avatarUrl: payload.picture,
-          googleId: payload.sub,
-        });
+        const user = await loginWithGoogle(response.credential);
 
         if (user) {
           toast.success(`Welcome to Rentora, ${user.name}!`);
@@ -141,6 +127,16 @@ export default function RegisterPage() {
       return;
     }
 
+    if (!/[A-Z]/.test(password)) {
+      setError("Password must contain at least one uppercase letter.");
+      return;
+    }
+
+    if (!/[a-z]/.test(password)) {
+      setError("Password must contain at least one lowercase letter.");
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError("Password and confirmation password do not match.");
       return;
@@ -154,21 +150,17 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      // Register into AppContext & backend via authApi
+      // Register into AppContext & backend via authApi strictly as Customer
       const registered = await registerUser({
         name: fullName.trim(),
         email: email.trim().toLowerCase(),
         password,
-        role,
+        role: "customer",
         avatarUrl,
       });
 
-      toast.success(`Account registered successfully as ${role.toUpperCase()}! Welcome, ${registered.name}.`);
-      if (role === "owner") {
-        router.push("/dashboard/owner");
-      } else {
-        router.push("/dashboard/customer");
-      }
+      toast.success(`Account registered successfully! Welcome, ${registered.name}.`);
+      router.push("/dashboard/customer");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to register account.";
       setError(msg);
@@ -210,44 +202,26 @@ export default function RegisterPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Account Role Selection */}
+            {/* Account Role Badge */}
             <div>
               <span className="block text-[11px] font-bold uppercase tracking-wider text-[#6A726B] mb-2">
                 Account Type
               </span>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setRole("customer")}
-                  className={`p-3 rounded-xs border text-left flex items-start gap-2.5 transition-all cursor-pointer ${
-                    role === "customer"
-                      ? "bg-white border-[#183C32] ring-2 ring-[#183C32]/20"
-                      : "bg-[#F7F6F1] border-[#DCDBCF] hover:bg-white"
-                  }`}
-                >
-                  <Briefcase className={`w-4 h-4 mt-0.5 ${role === "customer" ? "text-[#183C32]" : "text-[#8A948D]"}`} />
+              <div className="p-3 bg-white border border-[#183C32] rounded-xs flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <Briefcase className="w-4 h-4 text-[#183C32]" />
                   <div>
-                    <span className="block text-xs font-bold text-[#183C32]">Customer</span>
-                    <span className="text-[10px] text-[#6A726B]">Rent equipment</span>
+                    <span className="block text-xs font-bold text-[#183C32]">Contractor / Customer</span>
+                    <span className="text-[10px] text-[#6A726B]">Full equipment discovery and rental privileges</span>
                   </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setRole("owner")}
-                  className={`p-3 rounded-xs border text-left flex items-start gap-2.5 transition-all cursor-pointer ${
-                    role === "owner"
-                      ? "bg-white border-[#183C32] ring-2 ring-[#183C32]/20"
-                      : "bg-[#F7F6F1] border-[#DCDBCF] hover:bg-white"
-                  }`}
-                >
-                  <Wrench className={`w-4 h-4 mt-0.5 ${role === "owner" ? "text-[#D99A42]" : "text-[#8A948D]"}`} />
-                  <div>
-                    <span className="block text-xs font-bold text-[#183C32]">Fleet Owner</span>
-                    <span className="text-[10px] text-[#6A726B]">List &amp; earn</span>
-                  </div>
-                </button>
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-xs bg-green-50 text-green-800 border border-green-200">
+                  Standard
+                </span>
               </div>
+              <p className="text-[10px] text-[#8A948D] mt-1.5">
+                Note: Machinery Fleet Owner privileges require administrative commercial verification after registration.
+              </p>
             </div>
 
             {/* Full Name */}

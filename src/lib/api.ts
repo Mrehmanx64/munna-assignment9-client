@@ -25,12 +25,12 @@ export const api = axios.create({
   timeout: 15000,
 });
 
-// In-memory token holder with localStorage persistence to safeguard cross-domain sessions
-// (safeguards against browser third-party cookie blocking between Vercel and Render)
+// In-memory token holder only (Never persist tokens in localStorage or sessionStorage)
 let inMemoryAccessToken: string | null = null;
 if (typeof window !== "undefined") {
   try {
-    inMemoryAccessToken = localStorage.getItem("rentora_access_token");
+    // Purge any legacy tokens stored in localStorage to enforce strict HttpOnly cookie authentication
+    localStorage.removeItem("rentora_access_token");
   } catch {
     // Ignore
   }
@@ -38,29 +38,10 @@ if (typeof window !== "undefined") {
 
 export const setAccessToken = (token: string | null): void => {
   inMemoryAccessToken = token;
-  if (typeof window !== "undefined") {
-    try {
-      if (token) {
-        localStorage.setItem("rentora_access_token", token);
-      } else {
-        localStorage.removeItem("rentora_access_token");
-      }
-    } catch {
-      // Ignore
-    }
-  }
 };
 
 export const getAccessToken = (): string | null => {
-  if (inMemoryAccessToken) return inMemoryAccessToken;
-  if (typeof window !== "undefined") {
-    try {
-      return localStorage.getItem("rentora_access_token");
-    } catch {
-      return null;
-    }
-  }
-  return null;
+  return inMemoryAccessToken;
 };
 
 // Attach access token if present during active session
@@ -274,12 +255,7 @@ export const authApi = {
     return res.data;
   },
 
-  async googleAuth(data: {
-    email: string;
-    name: string;
-    googleId?: string;
-    avatarUrl?: string;
-  }) {
+  async googleAuth(data: { idToken: string }) {
     const res = await api.post("/auth/google", data);
     return res.data;
   },
@@ -388,6 +364,11 @@ export const ownerApi = {
     };
   },
 
+  async updateBookingStatus(id: string, bookingStatus: string) {
+    const res = await api.patch(`/owner/bookings/${id}/status`, { bookingStatus });
+    return normalizeBooking(res.data?.data);
+  },
+
   async getAnalyticsOverview() {
     const res = await api.get("/owner/analytics/overview");
     return res.data?.data;
@@ -488,7 +469,7 @@ export const adminApi = {
   },
 
   async rejectEquipment(id: string, rejectionReason: string) {
-    const res = await api.patch(`/admin/equipment/${id}/reject`, { rejectionReason });
+    const res = await api.patch(`/admin/equipment/${id}/reject`, { status: "Rejected", rejectionReason });
     return normalizeEquipment(res.data?.data);
   },
 
@@ -536,5 +517,18 @@ export const adminApi = {
   async updateUserRole(id: string, role: UserRole) {
     const res = await api.patch(`/admin/users/${id}/role`, { role });
     return normalizeUser(res.data?.data);
+  },
+};
+
+export const userApi = {
+  async updateProfile(data: {
+    name?: string;
+    phone?: string;
+    address?: string;
+    avatarUrl?: string;
+    image?: string;
+  }) {
+    const res = await api.patch("/users/me", data);
+    return normalizeUser(res.data?.data?.user || res.data?.data);
   },
 };
