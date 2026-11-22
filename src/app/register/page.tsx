@@ -150,17 +150,23 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      // Register into AppContext & backend via authApi strictly as Customer
+      // Register into AppContext & backend via authApi
       const registered = await registerUser({
         name: fullName.trim(),
         email: email.trim().toLowerCase(),
         password,
-        role: "customer",
+        role,
         avatarUrl,
       });
 
-      toast.success(`Account registered successfully! Welcome, ${registered.name}.`);
-      router.push("/dashboard/customer");
+      toast.success(
+        `Account registered successfully as ${role === "owner" ? "FLEET OWNER" : "CUSTOMER"}! Welcome, ${registered.name}.`
+      );
+      if (role === "owner") {
+        router.push("/dashboard/owner");
+      } else {
+        router.push("/dashboard/customer");
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to register account.";
       setError(msg);
@@ -202,26 +208,44 @@ export default function RegisterPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Account Role Badge */}
+            {/* Account Role Selection */}
             <div>
               <span className="block text-[11px] font-bold uppercase tracking-wider text-[#6A726B] mb-2">
                 Account Type
               </span>
-              <div className="p-3 bg-white border border-[#183C32] rounded-xs flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <Briefcase className="w-4 h-4 text-[#183C32]" />
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setRole("customer")}
+                  className={`p-3 rounded-xs border text-left flex items-start gap-2.5 transition-all cursor-pointer ${
+                    role === "customer"
+                      ? "bg-white border-[#183C32] ring-2 ring-[#183C32]/20"
+                      : "bg-[#F7F6F1] border-[#DCDBCF] hover:bg-white"
+                  }`}
+                >
+                  <Briefcase className={`w-4 h-4 mt-0.5 ${role === "customer" ? "text-[#183C32]" : "text-[#8A948D]"}`} />
                   <div>
-                    <span className="block text-xs font-bold text-[#183C32]">Contractor / Customer</span>
-                    <span className="text-[10px] text-[#6A726B]">Full equipment discovery and rental privileges</span>
+                    <span className="block text-xs font-bold text-[#183C32]">Customer</span>
+                    <span className="text-[10px] text-[#6A726B]">Rent machinery</span>
                   </div>
-                </div>
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-xs bg-green-50 text-green-800 border border-green-200">
-                  Standard
-                </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setRole("owner")}
+                  className={`p-3 rounded-xs border text-left flex items-start gap-2.5 transition-all cursor-pointer ${
+                    role === "owner"
+                      ? "bg-white border-[#183C32] ring-2 ring-[#183C32]/20"
+                      : "bg-[#F7F6F1] border-[#DCDBCF] hover:bg-white"
+                  }`}
+                >
+                  <Wrench className={`w-4 h-4 mt-0.5 ${role === "owner" ? "text-[#D99A42]" : "text-[#8A948D]"}`} />
+                  <div>
+                    <span className="block text-xs font-bold text-[#183C32]">Fleet Owner</span>
+                    <span className="text-[10px] text-[#6A726B]">List &amp; earn</span>
+                  </div>
+                </button>
               </div>
-              <p className="text-[10px] text-[#8A948D] mt-1.5">
-                Note: Machinery Fleet Owner privileges require administrative commercial verification after registration.
-              </p>
             </div>
 
             {/* Full Name */}

@@ -223,7 +223,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         email: userData.email,
         password: userData.password,
         confirmPassword: userData.password,
-        role: "customer", // Strict requirement: Customer role only for public registration
+        role: userData.role === "owner" ? "owner" : "customer",
         avatarUrl: userData.avatarUrl,
         phone: userData.phone,
         address: userData.address,
