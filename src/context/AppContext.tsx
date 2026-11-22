@@ -131,12 +131,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [currentRole]);
 
   const hydrateSession = useCallback(async () => {
+    // If no access token exists in storage, user is guest — do not query or resurrect
+    const token = getAccessToken();
+    if (!token) {
+      setRegisteredUser(null);
+      setRoleState("guest");
+      setIsAuthResolving(false);
+      return;
+    }
+
     try {
       const res = await authApi.getMe();
       const rawUser = res.data?.user || res.data?.data?.user || res.data?.data || res.data;
-      const token = res.data?.token || res.data?.data?.token;
-      if (token) {
-        setAccessToken(token);
+      const newToken = res.data?.token || res.data?.data?.token;
+      if (newToken) {
+        setAccessToken(newToken);
       }
       if (rawUser && (rawUser.id || rawUser._id || rawUser.email)) {
         const user = normalizeUser(rawUser);
@@ -185,7 +194,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
         const currentToken = getAccessToken();
-        if (!currentToken && registeredUser) {
+        if (!currentToken) {
           setRegisteredUser(null);
           setRoleState("guest");
           setFavorites([]);
@@ -201,7 +210,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener("storage", handleStorageChange);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [refreshEquipment, hydrateSession, registeredUser]);
+  }, [refreshEquipment, hydrateSession]);
 
   useEffect(() => {
     if (registeredUser) {
@@ -334,16 +343,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
-    try {
-      await authApi.logout();
-    } catch {
-      // Ignore network failure on logout
-    }
+    // 1. Immediately wipe local auth token & user state to prevent session resurrection
     setAccessToken(null);
     setRegisteredUser(null);
     setRoleState("guest");
     setFavorites([]);
     setBookings([]);
+
+    // 2. Clear backend cookies
+    try {
+      await authApi.logout();
+    } catch {
+      // Ignore network failure on logout
+    }
+
     toast.info("Signed out to Guest mode");
   };
 
