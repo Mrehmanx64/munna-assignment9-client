@@ -27,24 +27,24 @@ The visual design is inspired by high-end architectural monographs, contemporary
 
 ---
 
-## ⚡ Role-Based Architecture & Live Persona Switcher
+## ⚡ Role-Based Architecture & Platform Tiers
 
-Rentora features an integrated **Interactive Persona Switcher** embedded directly in the top navigation bar and mobile drawer. You can switch between roles in real-time with zero friction:
+Rentora features comprehensive role-based access control (RBAC) across three distinct user tiers, authenticated securely against the backend:
 
-1. **Customer (`Alexander Hayes`)**:
+1. **Customer / Contractor**:
    - Browse, search, and filter catalog with live parameters.
    - Save machinery to Favorites with persistent state.
-   - Book equipment with automatic escrow calculation (duration × daily/weekly/hourly rate + damage waiver + mobilization).
+   - Book equipment with automatic escrow calculation (duration × daily/weekly/monthly rate).
    - View mobilization slips, rental history, and booking status in `/dashboard/customer`.
    - Edit contractor profile, dispatch addresses, and certifications in `/dashboard/customer/profile`.
 
-2. **Fleet Owner (`Marcus Vance`)**:
+2. **Fleet Owner**:
    - High-yield telemetry dashboard with Recharts financial performance charts in `/dashboard/owner`.
    - Review incoming rental requests, approve or complete bookings in `/dashboard/owner/rentals`.
    - List new heavy machinery with multi-tier specs, live image preview, and terms in `/dashboard/owner/add`.
-   - Manage fleet listing status (Active/Maintenance/Draft) and inventory in `/dashboard/owner/equipment`.
+   - Manage fleet listing status (Pending/Approved/Rejected) and inventory in `/dashboard/owner/equipment`.
 
-3. **Platform Administrator (`Elena Rostova`)**:
+3. **Platform Administrator**:
    - Master platform console with GMV area charts and category distribution donut charts in `/dashboard/admin`.
    - Manage user roles (Customer, Owner, Admin) and account status in `/dashboard/admin/users`.
    - Quality control & safety inspection approvals for pending machinery in `/dashboard/admin/equipment`.
@@ -53,7 +53,7 @@ Rentora features an integrated **Interactive Persona Switcher** embedded directl
 4. **Guest (Unauthenticated)**:
    - Full public browsing of catalog, categories, specifications, and owner reviews.
    - Prompts for sign-in upon attempting high-intent booking or favoriting actions.
-   - Quick-login presets on `/login` and `/register` for 1-click test drive of any persona.
+   - Secure login and registration with validation feedback.
 
 ---
 
@@ -97,7 +97,7 @@ Rentora features an integrated **Interactive Persona Switcher** embedded directl
 - **Data Visualization**: Recharts (ResponsiveContainer, AreaChart, BarChart, PieChart)
 - **Icons**: Lucide React + custom inline brand SVGs
 - **Notifications**: Sonner toast system
-- **State Management**: React Context (`AppContext.tsx`) with live backend authentication persistence, local storage fallback, and active persona switcher
+- **State Management**: React Context (`AppContext.tsx`) with live backend authentication persistence via secure HttpOnly cookies and authoritative role-based session hydration
 
 ---
 

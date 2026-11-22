@@ -169,7 +169,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
           </span>
         </div>
 
-        {/* Current Active Persona Banner */}
+        {/* Current Active User Profile */}
         <div className="px-5 py-4 border-b border-[#1D3B31] bg-[#0E1E19]">
           <p className="text-[10px] uppercase font-bold tracking-widest text-[#7F8B83]">
             {roleTitle}
