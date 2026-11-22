@@ -74,14 +74,21 @@ export function DashboardShell({ children }: DashboardShellProps) {
     );
   }
 
+  interface DashboardLink {
+    label: string;
+    href: string;
+    icon: React.ComponentType<{ className?: string }>;
+    badge?: number;
+  }
+
   // Role-based navigation links
-  const customerLinks = [
+  const customerLinks: DashboardLink[] = [
     { label: "My Rentals", href: "/dashboard/customer", icon: Truck },
     { label: "Favorites & Saved", href: "/dashboard/customer/favorites", icon: Bookmark, badge: favorites.length },
     { label: "Contractor Profile", href: "/dashboard/customer/profile", icon: UserIcon },
   ];
 
-  const ownerLinks = [
+  const ownerLinks: DashboardLink[] = [
     { label: "Fleet Overview", href: "/dashboard/owner", icon: LayoutDashboard },
     { label: "List New Equipment", href: "/dashboard/owner/add", icon: PlusCircle },
     { label: "My Fleet Listings", href: "/dashboard/owner/equipment", icon: Wrench },
@@ -89,7 +96,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
     { label: "Owner Profile", href: "/dashboard/owner/profile", icon: UserIcon },
   ];
 
-  const adminLinks = [
+  const adminLinks: DashboardLink[] = [
     { label: "Platform Overview", href: "/dashboard/admin", icon: LayoutDashboard },
     { label: "User Directory", href: "/dashboard/admin/users", icon: Users },
     { label: "Equipment Approvals", href: "/dashboard/admin/equipment", icon: ShieldCheck },
