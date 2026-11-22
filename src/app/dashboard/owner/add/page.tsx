@@ -97,6 +97,11 @@ export default function AddEquipmentPage() {
       return;
     }
 
+    if (description.trim().length < 10) {
+      setError("Equipment description must be at least 10 characters long.");
+      return;
+    }
+
     if (rentalPrice <= 0) {
       setError("Please set a valid rental price greater than $0.");
       return;

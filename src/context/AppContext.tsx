@@ -377,27 +377,58 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     data: Omit<Equipment, "id" | "createdAt" | "rating" | "reviewCount">
   ) => {
     try {
+      const termsStr = Array.isArray(data.terms)
+        ? data.terms.filter(Boolean).join("\n")
+        : typeof (data as any).rentalTerms === "string"
+        ? (data as any).rentalTerms
+        : typeof data.terms === "string"
+        ? data.terms
+        : "Standard commercial equipment rental terms and operating safety guidelines apply.";
+
+      const firstImage =
+        Array.isArray(data.images) && data.images.length > 0
+          ? data.images[0]
+          : (data as any).imageUrl ||
+            "https://images.unsplash.com/photo-1768085091650-e8e89ef57b76?q=80&w=1171&auto=format&fit=crop";
+
+      const allImages =
+        Array.isArray(data.images) && data.images.length > 0
+          ? data.images
+          : [firstImage];
+
       const created = await ownerApi.createEquipment({
         name: data.title,
         title: data.title,
         description: data.description,
         category: data.category,
-        rentalPrice: data.rentalPrice,
-        rentalType: data.rentalType === "monthly" ? "Monthly" : data.rentalType === "weekly" ? "Weekly" : "Daily",
-        availableQuantity: data.availableQuantity,
-        totalQuantity: data.totalQuantity,
+        rentalPrice: Number(data.rentalPrice),
+        rentalType:
+          data.rentalType === "monthly"
+            ? "Monthly"
+            : data.rentalType === "weekly"
+            ? "Weekly"
+            : "Daily",
+        availableQuantity: Number(data.availableQuantity ?? 1),
+        totalQuantity: Number(data.totalQuantity ?? 1),
         condition: data.condition,
         brand: data.brand,
         model: data.model,
         location: data.location,
-        imageUrl: data.images[0],
-        images: data.images,
-        rentalTerms: data.terms,
+        imageUrl: firstImage,
+        images: allImages,
+        rentalTerms: termsStr,
+        terms: termsStr,
+        specifications: Array.isArray(data.specifications) ? data.specifications : [],
       });
       setEquipmentList((prev) => [created, ...prev]);
       toast.success("Equipment listing submitted for admin review!");
     } catch (err: any) {
-      const errMsg = err?.response?.data?.message || err?.message || "Failed to create equipment listing";
+      const fieldErrors = err?.response?.data?.errors;
+      let errMsg = err?.response?.data?.message || err?.message || "Failed to create equipment listing";
+      if (Array.isArray(fieldErrors) && fieldErrors.length > 0) {
+        const details = fieldErrors.map((f: any) => `${f.field}: ${f.message}`).join("; ");
+        errMsg = `${errMsg} (${details})`;
+      }
       toast.error(errMsg);
       throw new Error(errMsg);
     }
@@ -412,7 +443,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       toast.success("Equipment listing updated successfully");
       return updated;
     } catch (err: any) {
-      const errMsg = err?.response?.data?.message || err?.message || "Failed to update equipment listing";
+      const fieldErrors = err?.response?.data?.errors;
+      let errMsg = err?.response?.data?.message || err?.message || "Failed to update equipment listing";
+      if (Array.isArray(fieldErrors) && fieldErrors.length > 0) {
+        const details = fieldErrors.map((f: any) => `${f.field}: ${f.message}`).join("; ");
+        errMsg = `${errMsg} (${details})`;
+      }
       toast.error(errMsg);
       throw new Error(errMsg);
     }
