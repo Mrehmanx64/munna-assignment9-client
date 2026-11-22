@@ -48,8 +48,21 @@ export function BookingModal({ equipment, onClose }: BookingModalProps) {
   const diffDays = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
 
   // Estimated pricing calculation for preview (server is authoritative)
-  const baseRentalSubtotal = equipment.rentalPrice * diffDays * quantity;
-  const estimatedTotal = baseRentalSubtotal;
+  let duration: number;
+  const rentalType = (equipment.rentalType || "daily").toLowerCase();
+  switch (rentalType) {
+    case "weekly":
+      duration = Math.max(1, Math.ceil(diffDays / 7));
+      break;
+    case "monthly":
+      duration = Math.max(1, Math.ceil(diffDays / 30));
+      break;
+    case "daily":
+    default:
+      duration = diffDays;
+      break;
+  }
+  const estimatedTotal = equipment.rentalPrice * duration * quantity;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,7 +99,7 @@ export function BookingModal({ equipment, onClose }: BookingModalProps) {
         ownerName: equipment.ownerName,
         startDate,
         endDate,
-        durationText: `${diffDays} Day${diffDays > 1 ? "s" : ""}`,
+        durationText: `${duration} ${equipment.rentalType || "Day"}${duration > 1 ? "s" : ""}`,
         quantity,
         unitPrice: equipment.rentalPrice,
         rentalType: equipment.rentalType,
@@ -272,8 +285,8 @@ export function BookingModal({ equipment, onClose }: BookingModalProps) {
           {/* Pricing Calculation Summary Table */}
           <div className="p-4 bg-[#F7F6F1] border border-[#E5E4DC] rounded-xs space-y-2 text-xs">
             <div className="flex justify-between text-[#555E57]">
-              <span>Rental Period ({diffDays} Days × {quantity} Unit{quantity > 1 ? "s" : ""}):</span>
-              <span className="font-semibold text-[#202824]">${baseRentalSubtotal}</span>
+              <span>Rental Period ({duration} {equipment.rentalType || "Day"}{duration > 1 ? "s" : ""} × {quantity} Unit{quantity > 1 ? "s" : ""}):</span>
+              <span className="font-semibold text-[#202824]">${estimatedTotal}</span>
             </div>
             <div className="pt-2 border-t border-[#DCDBCF] flex justify-between items-baseline">
               <span className="font-bold text-[#183C32] text-sm">Estimated Total Amount:</span>

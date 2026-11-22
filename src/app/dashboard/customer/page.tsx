@@ -25,7 +25,7 @@ import { bookingApi, paymentApi } from "@/lib/api";
 import { toast } from "sonner";
 
 export default function CustomerRentalsPage() {
-  const { bookings: contextBookings, currentUser, refreshBookings } = useApp();
+  const { currentUser, refreshBookings } = useApp();
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -50,8 +50,9 @@ export default function CustomerRentalsPage() {
               refreshBookings();
             })
             .catch((err) => {
-              console.warn("Session verification warning:", err);
-              toast.success("Payment received! Updating rental records...");
+              const errMsg =
+                err?.response?.data?.message || "Payment verification failed or is pending webhook confirmation.";
+              toast.error(errMsg);
               queryClient.invalidateQueries({ queryKey: ["customer-rentals"] });
               refreshBookings();
             })
@@ -61,12 +62,16 @@ export default function CustomerRentalsPage() {
               window.history.replaceState({}, document.title, cleanUrl);
             });
         } else {
-          toast.success("Payment confirmed! Your rental booking is active and in escrow.");
+          toast.info("Payment session completed. Awaiting backend verification.");
           queryClient.invalidateQueries({ queryKey: ["customer-rentals"] });
           refreshBookings();
           const cleanUrl = window.location.pathname;
           window.history.replaceState({}, document.title, cleanUrl);
         }
+      } else if (status === "cancel") {
+        toast.info("Checkout process cancelled. You can resume checkout anytime.");
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
       }
     }
   }, [queryClient, refreshBookings]);
@@ -79,21 +84,7 @@ export default function CustomerRentalsPage() {
   });
 
   const liveBookings: RentalBooking[] = data?.bookings || [];
-  // Merge live backend bookings with local context bookings if any
-  const mergedMap = new Map<string, RentalBooking>();
-  for (const b of [...liveBookings, ...contextBookings]) {
-    if (b && b.id && !mergedMap.has(b.id)) {
-      mergedMap.set(b.id, b);
-    }
-  }
-
-  const allBookings = Array.from(mergedMap.values());
-  const myBookings = allBookings.filter((b) => {
-    const matchesUser = currentUser
-      ? b.customerId === currentUser.id || b.customerEmail === currentUser.email
-      : true;
-    return matchesUser;
-  });
+  const myBookings = liveBookings;
 
   const filteredBookings = myBookings.filter((b) => {
     if (statusFilter !== "all" && b.bookingStatus !== statusFilter) return false;
