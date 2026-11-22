@@ -189,7 +189,10 @@ export function DashboardShell({ children }: DashboardShellProps) {
     currentRole === "guest" ||
     !currentUser ||
     (pathname.startsWith("/dashboard/admin") && currentRole !== "admin") ||
-    (pathname.startsWith("/dashboard/owner") && currentRole !== "owner" && currentRole !== "admin");
+    (pathname.startsWith("/dashboard/owner") &&
+      currentRole !== "owner" &&
+      currentRole !== "admin" &&
+      pathname !== "/dashboard/owner/add");
 
   if (isUnauthorized) {
     return (
