@@ -9,7 +9,7 @@ const getBaseUrl = (): string => {
     return envUrl.endsWith("/api") ? envUrl : `${envUrl}/api`;
   }
   if (process.env.NODE_ENV === "development" && envUrl && envUrl.includes("localhost")) {
-    return envUrl;
+    return envUrl.endsWith("/api") ? envUrl : `${envUrl}/api`;
   }
   return "https://munna-assignment9-server.onrender.com/api";
 };

@@ -92,7 +92,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
   const adminLinks = [
     { label: "Platform Overview", href: "/dashboard/admin", icon: LayoutDashboard },
     { label: "User Directory", href: "/dashboard/admin/users", icon: Users },
-    { label: "Equipment Approvals", href: "/dashboard/admin/equipment", icon: ShieldCheck, badge: 6 },
+    { label: "Equipment Approvals", href: "/dashboard/admin/equipment", icon: ShieldCheck },
     { label: "All Platform Rentals", href: "/dashboard/admin/rentals", icon: Truck },
     { label: "Admin Profile", href: "/dashboard/admin/profile", icon: UserIcon },
   ];
