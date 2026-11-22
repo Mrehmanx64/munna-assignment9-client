@@ -18,6 +18,7 @@ import {
   MapPin,
   CreditCard,
   Loader2,
+  PlusCircle,
 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { RentalBooking } from "@/types";
@@ -151,13 +152,22 @@ export default function CustomerRentalsPage() {
           </p>
         </div>
 
-        <Link
-          href="/equipment"
-          className="px-4 py-2 bg-[#183C32] hover:bg-[#245344] text-[#F7F6F1] text-xs font-bold uppercase tracking-wider rounded-xs transition-colors shadow-xs inline-flex items-center gap-2 self-start sm:self-auto cursor-pointer"
-        >
-          <span>Rent New Equipment</span>
-          <ArrowRight className="w-4 h-4" />
-        </Link>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <Link
+            href="/dashboard/owner/add"
+            className="px-3.5 py-2 bg-white hover:bg-[#F7F6F1] text-[#183C32] text-xs font-bold uppercase tracking-wider rounded-xs border border-[#DCDBCF] transition-colors shadow-2xs inline-flex items-center gap-1.5 cursor-pointer"
+          >
+            <PlusCircle className="w-3.5 h-3.5 text-[#D99A42]" />
+            <span>List Machinery</span>
+          </Link>
+          <Link
+            href="/equipment"
+            className="px-4 py-2 bg-[#183C32] hover:bg-[#245344] text-[#F7F6F1] text-xs font-bold uppercase tracking-wider rounded-xs transition-colors shadow-xs inline-flex items-center gap-2 cursor-pointer"
+          >
+            <span>Rent Equipment</span>
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
       </div>
 
       {/* Metrics Row */}

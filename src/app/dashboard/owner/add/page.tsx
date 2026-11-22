@@ -13,15 +13,43 @@ import {
   MapPin,
   Upload,
   Loader2,
+  ShieldAlert,
+  Clock,
+  CheckCircle2,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { useApp } from "@/context/AppContext";
 import { EquipmentCategory, EquipmentCondition, RentalType } from "@/types";
-import { uploadApi } from "@/lib/api";
+import { uploadApi, userApi } from "@/lib/api";
 import { toast } from "sonner";
 
 export default function AddEquipmentPage() {
   const router = useRouter();
-  const { addEquipment, currentUser } = useApp();
+  const { addEquipment, currentUser, currentRole } = useApp();
+
+  // Query customer's upgrade request status if customer
+  const { data: upgradeStatus, refetch: refetchStatus } = useQuery({
+    queryKey: ["my-upgrade-status"],
+    queryFn: () => userApi.getUpgradeStatus(),
+    enabled: currentRole === "customer",
+  });
+
+  const [isRequestingUpgrade, setIsRequestingUpgrade] = useState(false);
+
+  const handleRequestUpgrade = async () => {
+    setIsRequestingUpgrade(true);
+    try {
+      const res = await userApi.requestUpgrade(
+        "Contractor requested role upgrade to Fleet Owner to register and publish machinery assets."
+      );
+      toast.success(res?.message || "Upgrade request submitted to administrators!");
+      await refetchStatus();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || err?.message || "Failed to submit upgrade request.");
+    } finally {
+      setIsRequestingUpgrade(false);
+    }
+  };
 
   // Form State
   const [title, setTitle] = useState("");
@@ -153,6 +181,75 @@ export default function AddEquipmentPage() {
       setIsSubmitting(false);
     }
   };
+
+  // Customer guard: Customers cannot publish fleet listings directly
+  if (currentRole === "customer") {
+    const hasPending = upgradeStatus?.hasPendingRequest;
+    return (
+      <div className="max-w-2xl mx-auto py-8 px-4 space-y-6">
+        <div className="bg-white p-6 sm:p-8 rounded-sm border-2 border-[#D99A42] shadow-sm space-y-5">
+          <div className="flex items-start gap-4">
+            <div className="p-3 bg-amber-50 rounded-sm text-[#D99A42] shrink-0 border border-amber-200">
+              <ShieldAlert className="w-8 h-8" />
+            </div>
+            <div className="space-y-1">
+              <div className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-[#D99A42]">
+                <Wrench className="w-3.5 h-3.5" />
+                <span>Restricted Action: Fleet Owners Only</span>
+              </div>
+              <h2 className="font-heading text-xl sm:text-2xl font-extrabold text-[#183C32]">
+                Fleet Owner Clearance Required
+              </h2>
+              <p className="text-xs sm:text-sm text-[#6A726B] leading-relaxed">
+                Only registered <strong>Fleet Owners</strong> are permitted to list heavy machinery and earn commercial lease revenue on Rentora. Your active account is currently registered as a <span className="font-bold text-[#183C32] uppercase">Customer</span> (Contractor / Renter).
+              </p>
+            </div>
+          </div>
+
+          <div className="p-4 bg-[#F7F6F1] rounded-xs border border-[#ECEBE3] space-y-2">
+            <div className="flex items-center gap-2 text-xs font-bold text-[#183C32]">
+              <AlertCircle className="w-4 h-4 text-[#D99A42]" />
+              <span>How to Upgrade Your Role</span>
+            </div>
+            <p className="text-xs text-[#555E57] leading-relaxed">
+              Click the button below to submit an instant role upgrade request. Platform administrators will review your contractor profile and promote your account to <strong>Fleet Owner</strong>, unlocking full machinery listing clearance.
+            </p>
+          </div>
+
+          <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-[#ECEBE3]">
+            {hasPending ? (
+              <div className="inline-flex items-center gap-2 px-3 py-2 bg-amber-50 text-amber-800 text-xs font-bold rounded-xs border border-amber-200">
+                <Clock className="w-4 h-4 animate-spin text-amber-600" />
+                <span>Upgrade Request Pending Administrator Review</span>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={handleRequestUpgrade}
+                disabled={isRequestingUpgrade}
+                className="px-5 py-2.5 bg-[#183C32] hover:bg-[#245344] text-[#F7F6F1] text-xs font-bold uppercase tracking-wider rounded-xs transition-colors shadow-xs inline-flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {isRequestingUpgrade ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-[#D99A42]" />
+                ) : (
+                  <Wrench className="w-4 h-4 text-[#D99A42]" />
+                )}
+                <span>Request Upgrade to Fleet Owner</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => router.push("/dashboard/customer")}
+              className="px-4 py-2 bg-white hover:bg-[#F7F6F1] text-[#6A726B] text-xs font-semibold rounded-xs border border-[#DCDBCF] transition-colors text-center cursor-pointer"
+            >
+              Return to Customer Portal
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl space-y-6">

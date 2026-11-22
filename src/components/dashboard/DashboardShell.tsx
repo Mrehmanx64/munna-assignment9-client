@@ -22,8 +22,14 @@ import {
   ExternalLink,
   ChevronDown,
   Building2,
+  Check,
+  Clock,
+  Loader2,
+  ShieldAlert,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { useApp } from "@/context/AppContext";
+import { adminApi } from "@/lib/api";
 import { toast } from "sonner";
 
 interface DashboardShellProps {
@@ -56,11 +62,48 @@ export function DashboardShell({ children }: DashboardShellProps) {
     }
 
     if (pathname.startsWith("/dashboard/owner") && currentRole !== "owner" && currentRole !== "admin") {
+      if (pathname === "/dashboard/owner/add") {
+        // Customer permitted to view dedicated Fleet Owner Upgrade warning & action
+        return;
+      }
       toast.error("Access denied: Machinery Fleet Owner privileges required.");
       router.replace("/dashboard/customer");
       return;
     }
   }, [currentRole, currentUser, isAuthResolving, pathname, router]);
+
+  // Query live upgrade requests for platform administrators
+  const { data: upgradeData, refetch: refetchUpgrades } = useQuery({
+    queryKey: ["admin-upgrade-requests"],
+    queryFn: () => adminApi.getUpgradeRequests(),
+    enabled: currentRole === "admin",
+    refetchInterval: 15000,
+  });
+
+  const upgradeRequests: any[] = upgradeData?.requests || [];
+  const pendingUpgradesCount = upgradeRequests.filter((r) => r.status === "pending").length;
+
+  const handleApproveUpgrade = async (id: string, name: string) => {
+    try {
+      const res = await adminApi.approveUpgradeRequest(id);
+      toast.success(res?.message || `${name} has been upgraded to Fleet Owner.`);
+      refetchUpgrades();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || err?.message || "Failed to approve upgrade request.");
+      refetchUpgrades();
+    }
+  };
+
+  const handleRejectUpgrade = async (id: string, name: string) => {
+    try {
+      const res = await adminApi.rejectUpgradeRequest(id);
+      toast.info(res?.message || `Upgrade request for ${name} was rejected.`);
+      refetchUpgrades();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || err?.message || "Failed to reject upgrade request.");
+      refetchUpgrades();
+    }
+  };
 
   // Loading state while verifying authoritative session
   if (isAuthResolving) {
@@ -305,33 +348,105 @@ export function DashboardShell({ children }: DashboardShellProps) {
             <div className="relative">
               <button
                 onClick={() => setNotificationsOpen(!notificationsOpen)}
-                className="relative p-2 rounded-full text-[#4A544E] hover:text-[#183C32] hover:bg-[#F7F6F1] transition-colors"
+                className="relative p-2 rounded-full text-[#4A544E] hover:text-[#183C32] hover:bg-[#F7F6F1] transition-colors cursor-pointer"
                 title="Notifications"
                 aria-label="View notifications"
               >
                 <Bell className="w-4 h-4" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#D99A42]" />
+                {currentRole === "admin" && pendingUpgradesCount > 0 ? (
+                  <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full bg-[#D99A42] text-[9px] font-extrabold text-[#11231D] flex items-center justify-center animate-pulse">
+                    {pendingUpgradesCount}
+                  </span>
+                ) : (
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#D99A42]" />
+                )}
               </button>
 
               {notificationsOpen && (
-                <div className="absolute right-0 mt-2 w-80 bg-white rounded-sm shadow-xl border border-[#E5E4DC] p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="absolute right-0 mt-2 w-84 sm:w-96 bg-white rounded-sm shadow-xl border border-[#E5E4DC] p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                   <div className="flex items-center justify-between pb-2 border-b border-[#ECEBE3]">
                     <span className="text-xs font-bold text-[#183C32] uppercase tracking-wide">
-                      Field Alerts &amp; Updates
+                      {currentRole === "admin" ? "Admin Notifications & Upgrades" : "Field Alerts & Updates"}
                     </span>
-                    <span className="text-[10px] text-[#D99A42] font-semibold">3 New</span>
+                    {currentRole === "admin" ? (
+                      <span className="text-[10px] text-[#D99A42] font-bold">
+                        {pendingUpgradesCount} Pending Upgrade{pendingUpgradesCount !== 1 ? "s" : ""}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-[#2E6B4F] font-semibold">Active System</span>
+                    )}
                   </div>
-                  <div className="divide-y divide-[#F7F6F1] py-1">
-                    {notifications.map((n) => (
-                      <div key={n.id} className="py-2.5 px-1 hover:bg-[#F7F6F1] rounded-xs cursor-pointer">
-                        <div className="flex items-center justify-between">
-                          <p className="text-xs font-bold text-[#183C32]">{n.title}</p>
-                          <span className="text-[10px] text-[#8A948D]">{n.time}</span>
+
+                  {currentRole === "admin" ? (
+                    <div className="divide-y divide-[#F0EFE9] max-h-80 overflow-y-auto py-1">
+                      {upgradeRequests.length === 0 ? (
+                        <div className="py-6 text-center text-xs text-[#6A726B]">
+                          No contractor upgrade requests yet.
                         </div>
-                        <p className="text-[11px] text-[#555E57] mt-0.5">{n.desc}</p>
-                      </div>
-                    ))}
-                  </div>
+                      ) : (
+                        upgradeRequests.map((req) => (
+                          <div key={req.id} className="py-3 px-2 space-y-1.5 bg-white hover:bg-[#FBFBFA] rounded-xs transition-colors">
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <span className="font-bold text-xs text-[#183C32] block">
+                                  {req.userName}
+                                </span>
+                                <span className="text-[10px] text-[#6A726B] font-mono">
+                                  {req.userEmail}
+                                </span>
+                              </div>
+                              <span className="text-[9px] text-[#8A948D] shrink-0">
+                                {new Date(req.createdAt).toLocaleDateString()}
+                              </span>
+                            </div>
+
+                            <p className="text-[11px] text-[#555E57] italic">
+                              &ldquo;{req.reason || "Requests upgrade to Fleet Owner."}&rdquo;
+                            </p>
+
+                            {req.status === "pending" ? (
+                              <div className="flex items-center gap-2 pt-1">
+                                <button
+                                  onClick={() => handleApproveUpgrade(req.id, req.userName)}
+                                  className="px-2.5 py-1 bg-[#183C32] hover:bg-[#245344] text-white text-[10px] font-bold uppercase rounded-xs transition-colors inline-flex items-center gap-1 shadow-2xs cursor-pointer"
+                                >
+                                  <Check className="w-3 h-3 text-[#D99A42]" />
+                                  <span>Approve (Make Owner)</span>
+                                </button>
+                                <button
+                                  onClick={() => handleRejectUpgrade(req.id, req.userName)}
+                                  className="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-[#B93838] border border-red-200 text-[10px] font-bold uppercase rounded-xs transition-colors cursor-pointer"
+                                >
+                                  <span>Reject</span>
+                                </button>
+                              </div>
+                            ) : req.status === "approved" ? (
+                              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-xs bg-green-50 text-green-800 border border-green-200 text-[10px] font-bold">
+                                <Check className="w-3 h-3 text-green-600" />
+                                <span>Approved by Admin {req.reviewedByName || "Marcus"}</span>
+                              </div>
+                            ) : (
+                              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-xs bg-red-50 text-red-800 border border-red-200 text-[10px] font-bold">
+                                <span>Rejected by Admin {req.reviewedByName || "Admin"}</span>
+                              </div>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-[#F7F6F1] py-1">
+                      {notifications.map((n) => (
+                        <div key={n.id} className="py-2.5 px-1 hover:bg-[#F7F6F1] rounded-xs cursor-pointer">
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs font-bold text-[#183C32]">{n.title}</p>
+                            <span className="text-[10px] text-[#8A948D]">{n.time}</span>
+                          </div>
+                          <p className="text-[11px] text-[#555E57] mt-0.5">{n.desc}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

@@ -550,6 +550,24 @@ export const adminApi = {
     const res = await api.patch(`/admin/users/${id}/role`, { role });
     return normalizeUser(res.data?.data);
   },
+
+  async getUpgradeRequests() {
+    const res = await api.get("/admin/upgrade-requests");
+    return {
+      requests: res.data?.data || [],
+      meta: res.data?.meta || { total: 0, pendingCount: 0 },
+    };
+  },
+
+  async approveUpgradeRequest(id: string) {
+    const res = await api.patch(`/admin/upgrade-requests/${id}/approve`);
+    return res.data;
+  },
+
+  async rejectUpgradeRequest(id: string) {
+    const res = await api.patch(`/admin/upgrade-requests/${id}/reject`);
+    return res.data;
+  },
 };
 
 export const userApi = {
@@ -562,5 +580,15 @@ export const userApi = {
   }) {
     const res = await api.patch("/users/me", data);
     return normalizeUser(res.data?.data?.user || res.data?.data);
+  },
+
+  async requestUpgrade(reason?: string) {
+    const res = await api.post("/users/upgrade-request", { reason });
+    return res.data;
+  },
+
+  async getUpgradeStatus() {
+    const res = await api.get("/users/upgrade-request/status");
+    return res.data?.data;
   },
 };
