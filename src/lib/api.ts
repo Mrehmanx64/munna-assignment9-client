@@ -340,7 +340,10 @@ export const equipmentApi = {
     return normalizeEquipment(res.data?.data);
   },
 
-  async checkAvailability(id: string, params: { startDate: string; endDate: string; quantity?: number }) {
+  async checkAvailability(
+    id: string,
+    params?: { startDate?: string; endDate?: string; quantity?: number }
+  ) {
     const res = await api.get(`/equipment/${id}/availability`, { params });
     return res.data?.data;
   },

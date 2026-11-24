@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
@@ -10,10 +10,14 @@ import {
   Phone,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
   CreditCard,
+  Loader2,
+  Info,
 } from "lucide-react";
 import { Equipment } from "@/types";
 import { useApp } from "@/context/AppContext";
+import { equipmentApi } from "@/lib/api";
 
 interface BookingModalProps {
   equipment: Equipment;
@@ -28,7 +32,7 @@ export function BookingModal({ equipment, onClose }: BookingModalProps) {
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   const fiveDaysLater = new Date();
-  fiveDaysLater.setDate(fiveDaysLater.getDate() + 6);
+  fiveDaysLater.setDate(fiveDaysLater.getDate() + 5);
 
   const [startDate, setStartDate] = useState(tomorrow.toISOString().split("T")[0]);
   const [endDate, setEndDate] = useState(fiveDaysLater.toISOString().split("T")[0]);
@@ -40,6 +44,22 @@ export function BookingModal({ equipment, onClose }: BookingModalProps) {
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Live Availability & Schedule State
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
+  const [availability, setAvailability] = useState<{
+    isAvailable: boolean;
+    availableQuantity: number;
+    totalQuantity: number;
+    bookedQuantity: number;
+    bookedSchedules?: Array<{
+      startDate: string;
+      endDate: string;
+      quantity: number;
+      bookingStatus: string;
+    }>;
+  } | null>(null);
+  const [scheduleOverlapWarning, setScheduleOverlapWarning] = useState<string | null>(null);
 
   // Compute duration in days
   const start = new Date(startDate);
@@ -64,6 +84,72 @@ export function BookingModal({ equipment, onClose }: BookingModalProps) {
   }
   const estimatedTotal = equipment.rentalPrice * duration * quantity;
 
+  // Real-time server-side availability checking based on dates, quantity and equipment schedules
+  useEffect(() => {
+    let isCurrent = true;
+    if (!startDate || !endDate || end < start) {
+      setAvailability(null);
+      setScheduleOverlapWarning(null);
+      return;
+    }
+
+    setCheckingAvailability(true);
+    const qty = Math.max(1, Number(quantity) || 1);
+
+    const timer = setTimeout(() => {
+      equipmentApi
+        .checkAvailability(equipment.id, {
+          startDate,
+          endDate,
+          quantity: qty,
+        })
+        .then((data) => {
+          if (!isCurrent) return;
+          setAvailability(data);
+
+          // Check if user selected dates conflict with existing active/confirmed bookings
+          if (data && data.bookedSchedules && data.bookedSchedules.length > 0) {
+            const reqStart = new Date(startDate);
+            const reqEnd = new Date(endDate);
+            const conflicting = data.bookedSchedules.find((s: any) => {
+              const bStart = new Date(s.startDate);
+              const bEnd = new Date(s.endDate);
+              return reqStart <= bEnd && reqEnd >= bStart;
+            });
+
+            if (conflicting && !data.isAvailable) {
+              setScheduleOverlapWarning(
+                `Schedule Conflict: Already reserved from ${new Date(
+                  conflicting.startDate
+                ).toLocaleDateString("en-US", { month: "short", day: "numeric" })} to ${new Date(
+                  conflicting.endDate
+                ).toLocaleDateString("en-US", { month: "short", day: "numeric" })} (${conflicting.quantity} unit${
+                  conflicting.quantity > 1 ? "s" : ""
+                }). Only ${data.availableQuantity} of ${data.totalQuantity} unit(s) free.`
+              );
+            } else {
+              setScheduleOverlapWarning(null);
+            }
+          } else {
+            setScheduleOverlapWarning(null);
+          }
+        })
+        .catch(() => {
+          if (!isCurrent) return;
+          setAvailability(null);
+          setScheduleOverlapWarning(null);
+        })
+        .finally(() => {
+          if (isCurrent) setCheckingAvailability(false);
+        });
+    }, 200);
+
+    return () => {
+      isCurrent = false;
+      clearTimeout(timer);
+    };
+  }, [equipment.id, startDate, endDate, quantity]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -80,6 +166,13 @@ export function BookingModal({ equipment, onClose }: BookingModalProps) {
 
     if (!phone.trim()) {
       setError("Please provide a contact phone number for field dispatch.");
+      return;
+    }
+
+    if (availability && !availability.isAvailable) {
+      setError(
+        `Equipment is unavailable for the selected dates. Only ${availability.availableQuantity} unit(s) available, but you requested ${quantity}. Please adjust dates or reduce quantity.`
+      );
       return;
     }
 
@@ -118,10 +211,28 @@ export function BookingModal({ equipment, onClose }: BookingModalProps) {
         router.push("/dashboard/customer");
       }
     } catch (err: any) {
-      setError(err.message || "Failed to initialize booking with server. Please try again.");
+      const msg = err.message || "Failed to initialize booking with server. Please try again.";
+      if (
+        msg.toLowerCase().includes("availability") ||
+        msg.toLowerCase().includes("insufficient") ||
+        msg.toLowerCase().includes("conflict")
+      ) {
+        setError(
+          `Schedule Conflict: This machinery was just booked by another contractor for overlapping dates. Please review the live schedule hints below and choose alternative dates.`
+        );
+        // Refresh availability schedule immediately
+        equipmentApi
+          .checkAvailability(equipment.id, { startDate, endDate, quantity })
+          .then(setAvailability)
+          .catch(() => {});
+      } else {
+        setError(msg);
+      }
       setIsSubmitting(false);
     }
   };
+
+  const isUnavailable = availability !== null && !availability.isAvailable;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
@@ -162,9 +273,13 @@ export function BookingModal({ equipment, onClose }: BookingModalProps) {
             </h4>
             <div className="flex items-center gap-2 text-xs text-[#6A726B] mt-0.5">
               <span>{equipment.brand} {equipment.model}</span>
-              <span>•</span>
+              <span>&bull;</span>
               <span className="font-semibold text-[#183C32]">
                 ${equipment.rentalPrice}/{equipment.rentalType}
+              </span>
+              <span>&bull;</span>
+              <span className="text-[#2E6B4F] font-semibold">
+                Fleet Stock: {equipment.totalQuantity || equipment.availableQuantity} units
               </span>
             </div>
           </div>
@@ -173,9 +288,12 @@ export function BookingModal({ equipment, onClose }: BookingModalProps) {
         {/* Modal Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xs flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>{error}</span>
+            <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xs flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <div className="space-y-0.5">
+                <span className="font-bold block">Booking Notice</span>
+                <span>{error}</span>
+              </div>
             </div>
           )}
 
@@ -219,7 +337,7 @@ export function BookingModal({ equipment, onClose }: BookingModalProps) {
                 id="booking-quantity"
                 type="number"
                 min={1}
-                max={Math.max(1, equipment.availableQuantity)}
+                max={Math.max(1, equipment.totalQuantity || equipment.availableQuantity)}
                 required
                 value={quantity}
                 onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
@@ -227,6 +345,107 @@ export function BookingModal({ equipment, onClose }: BookingModalProps) {
               />
             </div>
           </div>
+
+          {/* Real-Time Live Availability Feedback Badge */}
+          {checkingAvailability && (
+            <div className="p-2.5 bg-[#F7F6F1] border border-[#E0DFD6] rounded-xs flex items-center gap-2 text-xs text-[#6A726B]">
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-[#183C32]" />
+              <span>Checking real-time fleet schedules and yard stock availability...</span>
+            </div>
+          )}
+
+          {!checkingAvailability && availability && (
+            <div>
+              {availability.isAvailable ? (
+                <div className="p-2.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xs flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>
+                      <strong>Available for Selected Dates:</strong> {availability.availableQuantity} of{" "}
+                      {availability.totalQuantity} unit(s) currently ready.
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-xs">
+                    In Stock
+                  </span>
+                </div>
+              ) : (
+                <div className="p-3 bg-red-50 border border-red-300 text-red-800 rounded-xs space-y-1 text-xs">
+                  <div className="flex items-center gap-2 font-bold text-red-900">
+                    <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+                    <span>
+                      {availability.availableQuantity === 0
+                        ? "Unavailable for Selected Dates (0 units in stock)"
+                        : `Stock Limit: Only ${availability.availableQuantity} unit(s) available`}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-red-700 leading-relaxed">
+                    {scheduleOverlapWarning ||
+                      `All ${availability.totalQuantity} units are reserved during this schedule window. Please choose alternative dates or reduce requested quantity.`}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Reserved Dates & Schedule Hint Box */}
+          {availability?.bookedSchedules && availability.bookedSchedules.length > 0 && (
+            <div className="p-3 bg-[#FAF9F5] border border-[#E5E4DC] rounded-xs text-xs space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-[#183C32] flex items-center gap-1.5 text-[11px] uppercase tracking-wider">
+                  <Calendar className="w-3.5 h-3.5 text-[#D99A42]" />
+                  Active Reservations for this Machinery
+                </span>
+                <span className="text-[10px] text-[#6A726B] font-semibold bg-[#EBEAE3] px-2 py-0.5 rounded-xs">
+                  {availability.bookedSchedules.length} Scheduled
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-2 pt-1">
+                {availability.bookedSchedules.map((s, idx) => {
+                  const sStart = new Date(s.startDate);
+                  const sEnd = new Date(s.endDate);
+                  const reqStart = new Date(startDate);
+                  const reqEnd = new Date(endDate);
+                  const isConflicting = reqStart <= sEnd && reqEnd >= sStart;
+
+                  return (
+                    <div
+                      key={idx}
+                      className={`px-2.5 py-1 rounded-xs text-[11px] flex items-center gap-1.5 border transition-colors ${
+                        isConflicting
+                          ? "bg-red-50 border-red-300 text-red-800 font-bold"
+                          : "bg-white border-[#E0DFD6] text-[#525B55]"
+                      }`}
+                    >
+                      <span
+                        className={`w-2 h-2 rounded-full shrink-0 ${
+                          isConflicting ? "bg-red-500" : "bg-amber-500"
+                        }`}
+                      />
+                      <span>
+                        {sStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })} &ndash;{" "}
+                        {sEnd.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      </span>
+                      <span className="text-[10px] opacity-75">
+                        ({s.quantity} {s.quantity > 1 ? "units" : "unit"})
+                      </span>
+                      {isConflicting && (
+                        <span className="text-[9px] uppercase tracking-wider text-red-700 bg-red-100 px-1 py-0.2 rounded-xs">
+                          Conflict
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-[10px] text-[#8A948D] flex items-center gap-1">
+                <Info className="w-3 h-3 text-[#D99A42] shrink-0" />
+                <span>
+                  Tip: Choose mobilization and demobilization dates outside the red/amber schedule slots.
+                </span>
+              </p>
+            </div>
+          )}
 
           {/* Dispatch Contact & Jobsite Address */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -285,7 +504,7 @@ export function BookingModal({ equipment, onClose }: BookingModalProps) {
           {/* Pricing Calculation Summary Table */}
           <div className="p-4 bg-[#F7F6F1] border border-[#E5E4DC] rounded-xs space-y-2 text-xs">
             <div className="flex justify-between text-[#555E57]">
-              <span>Rental Period ({duration} {equipment.rentalType || "Day"}{duration > 1 ? "s" : ""} × {quantity} Unit{quantity > 1 ? "s" : ""}):</span>
+              <span>Rental Period ({duration} {equipment.rentalType || "Day"}{duration > 1 ? "s" : ""} &times; {quantity} Unit{quantity > 1 ? "s" : ""}):</span>
               <span className="font-semibold text-[#202824]">${estimatedTotal}</span>
             </div>
             <div className="pt-2 border-t border-[#DCDBCF] flex justify-between items-baseline">
@@ -319,11 +538,21 @@ export function BookingModal({ equipment, onClose }: BookingModalProps) {
             </button>
             <button
               type="submit"
-              disabled={isSubmitting}
-              className="px-6 py-2.5 bg-[#183C32] hover:bg-[#245344] text-[#F7F6F1] text-xs font-bold uppercase tracking-wider rounded-xs transition-colors shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              disabled={isSubmitting || isUnavailable}
+              className={`px-6 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xs transition-colors shadow-xs flex items-center gap-2 cursor-pointer ${
+                isUnavailable
+                  ? "bg-[#6A726B] text-[#DCDBCF] cursor-not-allowed opacity-80"
+                  : "bg-[#183C32] hover:bg-[#245344] text-[#F7F6F1]"
+              }`}
             >
               <CreditCard className="w-4 h-4 text-[#D99A42]" />
-              <span>{isSubmitting ? "Connecting to Stripe..." : "Proceed to Stripe Checkout"}</span>
+              <span>
+                {isSubmitting
+                  ? "Connecting to Stripe..."
+                  : isUnavailable
+                  ? "Unavailable for Selected Dates"
+                  : "Proceed to Stripe Checkout"}
+              </span>
             </button>
           </div>
         </form>

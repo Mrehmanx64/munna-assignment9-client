@@ -19,6 +19,7 @@ import {
   Clock,
   Sparkles,
   PackageOpen,
+  AlertTriangle,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Navbar } from "@/components/navigation/Navbar";
@@ -53,6 +54,14 @@ export default function EquipmentDetailsPage() {
     queryFn: () => equipmentApi.getById(id),
     enabled: !!id && !isAuthResolving && !!currentUser,
     staleTime: 60000,
+  });
+
+  // Fetch real-time schedule & fleet availability
+  const { data: availabilityData } = useQuery({
+    queryKey: ["equipmentAvailability", id],
+    queryFn: () => equipmentApi.checkAvailability(id),
+    enabled: !!id && !isAuthResolving && !!currentUser,
+    staleTime: 30000,
   });
 
   const equipment =
@@ -293,6 +302,41 @@ export default function EquipmentDetailsPage() {
                     </span>
                   </div>
                 </div>
+
+                {/* Live Schedule & Reserved Dates Hint */}
+                {availabilityData?.bookedSchedules && availabilityData.bookedSchedules.length > 0 && (
+                  <div className="p-3 bg-[#FAF9F5] border border-[#E5E4DC] rounded-xs text-xs space-y-2">
+                    <div className="flex items-center justify-between text-[#183C32] font-bold">
+                      <span className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider">
+                        <Calendar className="w-3.5 h-3.5 text-[#D99A42]" />
+                        Active Reserved Schedules
+                      </span>
+                      <span className="text-[10px] bg-[#EBEAE3] text-[#525B55] px-1.5 py-0.5 rounded font-mono">
+                        {availabilityData.bookedSchedules.length} Scheduled
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 pt-0.5">
+                      {availabilityData.bookedSchedules.slice(0, 4).map((s: any, idx: number) => (
+                        <span
+                          key={idx}
+                          className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-white border border-[#E0DFD6] rounded-xs text-[11px] text-[#525B55]"
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                          <span>
+                            {new Date(s.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })} &ndash;{" "}
+                            {new Date(s.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                          </span>
+                          <span className="text-[10px] text-[#8A948D]">
+                            ({s.quantity} {s.quantity > 1 ? "units" : "unit"})
+                          </span>
+                        </span>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-[#8A948D]">
+                      * Tip: Book dates outside these periods to avoid schedule overlaps.
+                    </p>
+                  </div>
+                )}
 
                 {/* Price Display */}
                 <div className="p-4 rounded-xs bg-[#F7F6F1] border border-[#E5E4DC]">
